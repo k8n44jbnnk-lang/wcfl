@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block content %}
+
+<header class="hero-header">
+  <div class="hero-badge badge">🏆 Live Fantasy Ranking</div>
+  <h1 class="text-gradient" style="font-size: var(--font-h1);">Fantasy Standings</h1>
+  <p>Real-time leaderboard for the ₹14,000 prize pool.</p>
+</header>
+
+<div class="page-container">
+
+  {# ── Leaderboard Sections ── #}
+  <section style="margin-bottom: 3rem;">
+    <div class="section-title">
+        <span>📊 Player Rankings</span>
+        <div class="badge">Click for Details</div>
+    </div>
+    
+  <div class="lb-container">
+    {% for row in rows %}
+    {% set rank = loop.index %}
+    {% set p_color = get_player_color(row.name) %}
+    <div class="data-card" style="{% if rank == 1 %}border-color: var(--accent-gold); box-shadow: 0 0 30px rgba(251,191,36,0.1);{% endif %}" onclick="toggleSquadByName('{{ row.name|replace(' ','_') }}')">
+      <div class="rank-badge" style="{% if rank == 1 %}background: var(--accent-gold); color: black;{% endif %}">{{ rank }}</div>
+      <div class="avatar-sm" style="background: {{ p_color }};">{{ row.name[0] }}</div>
+      <div class="data-card-info">
+          <div class="data-card-name">{{ row.name }}</div>
+          <div class="data-card-flags">
+              {% for t in row.teams %}<span title="{{ t.name }}">{{ t.flag }}</span>{% endfor %}
+          </div>
+      </div>
+      <div style="text-align: right;">
+          <div class="stat-val" style="{% if rank == 1 %}color: var(--accent-gold);{% else %}color: var(--primary);{% endif %}">{{ row.pts }}</div>
+          <div class="stat-lbl" style="font-size: 0.5rem;">Points</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  </section>
+
+  {# ── Expandable Squad Details ── #}
+  <section>
+    <div class="section-title">🛡️ Detailed Breakdowns</div>
+    
+    {% for row in team_rows %}
+    {% set p_color = get_player_color(row.name) %}
+    <div class="standard-card" style="padding: 0; overflow: hidden; border-left: 4px solid {{ p_color }};" id="squad-{{ row.name|replace(' ','_') }}">
+      <div style="padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleDetails(this)">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="avatar-sm" style="background: {{ p_color }}; width: 32px; height: 32px; font-size: 10px;">{{ row.name[0] }}</div>
+          <h3 style="margin: 0; font-size: 0.95rem;">{{ row.name }}'s Teams</h3>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-weight: 800; font-family: Lexend; color: var(--primary);">{{ row.pts }} PTS</span>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+      
+      <div class="details-content" style="display: none; padding: 1.25rem; background: rgba(255,255,255,0.02); border-top: 1px solid var(--border-light);">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem;">
+          {% for team in row.teams %}
+          <div class="match-card" style="text-align: center; cursor: pointer;" onclick="showTeamMatchDetails('{{ team.name }}')">
+            <span style="font-size: 2rem;">{{ team.flag }}</span>
+            <div style="font-weight: 700; font-size: 0.8rem; margin: 4px 0;">{{ team.name }}</div>
+            <div class="badge" style="background: var(--bg-dark); color: var(--success);">+{{ team.points }} pts</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+
+</div>{# /.page-container #}
+
+{# ── Match Details Modal ── #}
+<div id="matchModal" class="modal-overlay" onclick="closeModal()">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div id="modalBody"></div>
+    <button class="btn-modern btn-secondary-modern w-full" style="margin-top: 1rem;" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<button class="fab" id="syncFab" onclick="syncData()">⚽</button>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleDetails(header) {
+  const content = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  const isHidden = content.style.display === 'none';
+  content.style.display = isHidden ? 'block' : 'none';
+  chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function toggleSquadByName(name) {
+    const el = document.getElementById('squad-' + name);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const header = el.querySelector('div');
+        if (header.nextElementSibling.style.display === 'none') {
+            toggleDetails(header);
+        }
+    }
+}
+
+async function syncData() {
+  const fab = document.getElementById('syncFab');
+  fab.textContent = '⏳';
+  try {
+    const resp = await fetch('/api/match/sync-live', { method: 'POST' });
+    const data = await resp.json();
+    if (data.ok && data.count > 0) location.reload();
+    else fab.textContent = '⚽';
+  } catch (e) { fab.textContent = '⚽'; }
+}
+
+async function showTeamMatchDetails(teamName) {
+  const modal = document.getElementById('matchModal');
+  const body = document.getElementById('modalBody');
+  modal.style.display = 'flex';
+  body.innerHTML = '<div class="flex-center" style="padding: 3rem;">Searching records...</div>';
+  
+  try {
+    const resp = await fetch('/api/data');
+    const data = await resp.json();
+    const teamMatches = data.matches.filter(m => m.team1 === teamName || m.team2 === teamName);
+    
+    if (teamMatches.length === 0) {
+      body.innerHTML = `<h3>${teamName}</h3><p>No matches recorded yet.</p>`;
+      return;
+    }
+
+    let html = `<h2 class="section-title">${teamName} History</h2>`;
+    teamMatches.forEach(m => {
+      const res = (m.team1 === teamName) ? m.result.team1 : m.result.team2;
+      html += `
+        <div class="match-card mt-4">
+          <div class="match-row">
+            <span style="font-size:0.7rem; font-weight:800;">${m.stage.toUpperCase()}</span>
+            <span style="font-size:0.6rem; color:var(--text-dim);">${m.timestamp}</span>
+          </div>
+          <div class="flex-center" style="gap:1rem; margin:10px 0;">
+            <div style="text-align:center;"><div style="font-size:1.5rem;">${m.flag1}</div><div style="font-size:0.6rem;">${m.team1}</div></div>
+            <div style="font-weight:900; font-family:Lexend;">${m.score1} - ${m.score2}</div>
+            <div style="text-align:center;"><div style="font-size:1.5rem;">${m.flag2}</div><div style="font-size:0.6rem;">${m.team2}</div></div>
+          </div>
+          <div style="font-size:0.8rem; border-top:1px solid var(--border-light); padding-top:8px;">
+            ${res.breakdown.map(b => `<div style="display:flex; justify-content:space-between;"><span>${b.event}</span><span class="success">${b.pts >= 0 ? '+' : ''}${b.pts}</span></div>`).join('')}
+            <div style="display:flex; justify-content:space-between; font-weight:800; color:var(--primary); margin-top:4px;"><span>TOTAL</span><span>${res.points} PTS</span></div>
+          </div>
+        </div>
+      `;
+    });
+    body.innerHTML = html;
+  } catch (e) { body.innerHTML = 'Error loading matches.'; }
+}
+
+function closeModal() { document.getElementById('matchModal').style.display = 'none'; }
+</script>
+{% endblock %}

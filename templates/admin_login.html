@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display:flex;justify-content:center;align-items:center;min-height:75vh;padding:2rem;">
+  <div class="card" style="width:100%;max-width:420px; background: var(--bg-surface); border-radius: var(--radius-xl);">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">🔐</div>
+      <h1 class="hero-title text-gradient" style="font-size: 1.75rem;">Admin Access</h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">Please enter your secure PIN to manage the league.</p>
+    </div>
+
+    {% if warn_default %}
+    <div style="margin-bottom:1.5rem;padding:1rem;border-radius:var(--radius-md);background:rgba(245, 158, 11, 0.1);border:1px solid var(--warning);color:var(--warning);font-size:.85rem; line-height: 1.4;">
+      ⚠️ <strong>Security Note:</strong> You are currently using the default PIN (1234). It is recommended to update this via environment variables.
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div style="margin-bottom:1.5rem;padding:1rem;border-radius:var(--radius-md);background:rgba(239, 68, 68, 0.1);border:1px solid var(--danger);color:var(--danger);font-size:.85rem; text-align: center;">
+      ❌ {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/admin/login">
+      <div style="margin-bottom:1.5rem;">
+        <label for="pin" style="display:block;margin-bottom:.5rem;font-weight:700; font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.05em;">Access PIN</label>
+        <input
+          type="password"
+          id="pin"
+          name="pin"
+          placeholder="••••"
+          autocomplete="current-password"
+          required
+          style="width:100%;padding:1rem; background: var(--bg-dark); border:1px solid var(--border-light); border-radius:var(--radius-md); color: white; font-size: 1.25rem; text-align: center; letter-spacing: 0.5em;"
+        />
+      </div>
+      <button type="submit" class="btn-modern btn-primary-modern w-full" style="padding: 1rem;">
+        Authorize Session
+      </button>
+    </form>
+    
+    <div style="margin-top: 2rem; text-align: center;">
+        <a href="/" style="color: var(--text-dim); text-decoration: none; font-size: 0.8rem;">← Return to Dashboard</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

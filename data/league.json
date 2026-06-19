@@ -1,0 +1,299 @@
+{
+  "league_name": "WC2026 Fantasy League",
+  "budget": 2000,
+  "players": [
+    {
+      "name": "Piyush"
+    },
+    {
+      "name": "Deepanshu"
+    },
+    {
+      "name": "Dima"
+    },
+    {
+      "name": "Bhavya"
+    },
+    {
+      "name": "Lalit"
+    },
+    {
+      "name": "Gabu"
+    },
+    {
+      "name": "Jai"
+    }
+  ],
+  "teams_per_player": 4,
+  "tiers": {
+    "1": [
+      "France",
+      "Spain",
+      "England",
+      "Germany",
+      "Portugal",
+      "Netherlands",
+      "Argentina",
+      "Brazil"
+    ],
+    "2": [
+      "Belgium",
+      "Croatia",
+      "Uruguay",
+      "Colombia",
+      "USA",
+      "Japan",
+      "Morocco",
+      "Senegal"
+    ],
+    "3": [
+      "Switzerland",
+      "Austria",
+      "South Korea",
+      "Mexico",
+      "Canada",
+      "Ecuador",
+      "Ivory Coast",
+      "Egypt"
+    ],
+    "4": [
+      "Norway",
+      "Scotland",
+      "Sweden",
+      "T\u00c3\u00bcrkiye",
+      "Czechia",
+      "Bosnia and Herzegovina",
+      "Paraguay",
+      "Australia"
+    ],
+    "5": [
+      "Saudi Arabia",
+      "Iran",
+      "Ghana",
+      "Tunisia",
+      "Algeria",
+      "South Africa",
+      "Panama",
+      "Qatar"
+    ],
+    "6": [
+      "Jordan",
+      "Uzbekistan",
+      "Cape Verde",
+      "New Zealand",
+      "Cura\u00c3\u00a7ao",
+      "Haiti",
+      "DR Congo",
+      "Iraq"
+    ]
+  },
+  "tier_prices": {
+    "1": 200,
+    "2": 150,
+    "3": 100,
+    "4": 70,
+    "5": 40,
+    "6": 20
+  },
+  "started": true,
+  "auction_done": true,
+  "budgets": {
+    "Piyush": 0,
+    "Deepanshu": 0,
+    "Dima": 0,
+    "Bhavya": 0,
+    "Lalit": 0,
+    "Gabu": 0,
+    "Jai": 250
+  },
+  "points": {
+    "Piyush": 0,
+    "Deepanshu": 0,
+    "Dima": 0,
+    "Bhavya": 0,
+    "Lalit": 0,
+    "Gabu": 0,
+    "Jai": 13
+  },
+  "ownership": {
+    "Piyush": [
+      "Brazil",
+      "Netherlands",
+      "Canada",
+      "Sweden"
+    ],
+    "Deepanshu": [
+      "Turkey",
+      "Japan",
+      "Argentina",
+      "Ivory Coast"
+    ],
+    "Dima": [
+      "USA",
+      "Iran",
+      "France",
+      "Austria"
+    ],
+    "Bhavya": [
+      "Ecuador",
+      "Uruguay",
+      "Portugal",
+      "Croatia"
+    ],
+    "Lalit": [
+      "Morocco",
+      "Norway",
+      "England",
+      "Egypt"
+    ],
+    "Gabu": [
+      "Belgium",
+      "Spain",
+      "Colombia",
+      "Algeria"
+    ],
+    "Jai": [
+      "Mexico",
+      "Switzerland",
+      "Germany",
+      "South Korea"
+    ]
+  },
+  "team_sold": {
+    "Brazil": "Piyush",
+    "Netherlands": "Piyush",
+    "Canada": "Piyush",
+    "Sweden": "Piyush",
+    "Japan": "Deepanshu",
+    "Argentina": "Deepanshu",
+    "Ivory Coast": "Deepanshu",
+    "USA": "Dima",
+    "Iran": "Dima",
+    "France": "Dima",
+    "Austria": "Dima",
+    "Ecuador": "Bhavya",
+    "Uruguay": "Bhavya",
+    "Portugal": "Bhavya",
+    "Croatia": "Bhavya",
+    "Morocco": "Lalit",
+    "Norway": "Lalit",
+    "England": "Lalit",
+    "Egypt": "Lalit",
+    "Belgium": "Gabu",
+    "Spain": "Gabu",
+    "Colombia": "Gabu",
+    "Algeria": "Gabu",
+    "Mexico": "Jai",
+    "Switzerland": "Jai",
+    "Germany": "Jai",
+    "South Korea": "Jai",
+    "T\u00c3\u00bcrkiye": "Deepanshu"
+  },
+  "auction_queue": [],
+  "auction_idx": 0,
+  "current_bidder": 0,
+  "current_bid": 0,
+  "current_high_bidder": null,
+  "auction_active_bidders": [],
+  "auction_active_team": null,
+  "matches": [
+    {
+      "id": "22bc86a6",
+      "team1": "South Korea",
+      "team2": "Czechia",
+      "score1": 2,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Jai",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "South Korea",
+          "points": 6,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (2)",
+              "pts": 2
+            }
+          ]
+        },
+        "team2": {
+          "name": "Czechia",
+          "points": 1,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "South Korea 2\u00e2\u20ac\u201c1 Czechia (group)"
+      },
+      "timestamp": "12 Jun 2026, 02:00",
+      "flag1": "\u00f0\u0178\u2021\u00b0\u00f0\u0178\u2021\u00b7",
+      "flag2": "\u00f0\u0178\u2021\u00a8\u00f0\u0178\u2021\u00bf",
+      "fixture_id": "537328"
+    },
+    {
+      "id": "375c5f77",
+      "team1": "Mexico",
+      "team2": "South Africa",
+      "score1": 2,
+      "score2": 0,
+      "stage": "group",
+      "extra": {
+        "red_card_t1": 1
+      },
+      "owner1": "Jai",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "Mexico",
+          "points": 7,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (2)",
+              "pts": 2
+            },
+            {
+              "event": "Clean sheet",
+              "pts": 2
+            },
+            {
+              "event": "Red cards (1)",
+              "pts": -1
+            }
+          ]
+        },
+        "team2": {
+          "name": "South Africa",
+          "points": 0,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            }
+          ]
+        },
+        "summary": "Mexico 2\u00e2\u20ac\u201c0 South Africa (group)"
+      },
+      "timestamp": "12 Jun 2026, 02:52",
+      "flag1": "\u00f0\u0178\u2021\u00b2\u00f0\u0178\u2021\u00bd",
+      "flag2": "\u00f0\u0178\u2021\u00bf\u00f0\u0178\u2021\u00a6",
+      "fixture_id": "537327"
+    }
+  ]
+}

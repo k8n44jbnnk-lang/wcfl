@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block content %}
+
+{# ── Unified Hero Header ── #}
+<header class="hero-header">
+  <div class="hero-badge badge">⚽ Live Tournament Phase</div>
+  <h1 class="text-gradient">{{ data.league_name }}</h1>
+  <p class="hero-subtitle">The road to the ₹14,000 prize pool is underway.</p>
+  
+  <div class="flex-center hero-actions" style="gap: 1rem;">
+    <a href="/standings" class="btn-modern btn-primary-modern">🏆 View Standings</a>
+    <a href="/fixtures" class="btn-modern btn-secondary-modern">📅 Tournament Hub</a>
+  </div>
+</header>
+
+<div class="page-container">
+
+  {# ── Dashboard Stats ── #}
+  <section style="margin-bottom: 2rem;">
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-icon">🏃</span>
+        <div class="stat-val" id="matchesPlayed">0</div>
+        <div class="stat-lbl">Matches</div>
+      </div>
+      <div class="stat-card">
+        <span class="stat-icon">⏳</span>
+        <div class="stat-val" id="daysLeft">0</div>
+        <div class="stat-lbl">Days Left</div>
+      </div>
+      <div class="stat-card" style="border-color: var(--accent-gold);">
+        <span class="stat-icon">💎</span>
+        <div class="stat-val" id="totPoints" style="color: var(--accent-gold);">0</div>
+        <div class="stat-lbl">Tot. Points</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="bento-grid">
+
+    {# ── Live Match Widget ── #}
+    {% set latest = data.matches[0] if data.matches else None %}
+    {% if latest %}
+    <div class="standard-card" style="grid-column: span 12; background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent); border: 1px solid var(--primary);">
+      <div class="section-title">
+        <span style="display:flex; align-items:center; gap:8px;">
+           <span class="live-indicator"></span> Latest Match Result
+        </span>
+        <span class="badge">{{ latest.stage | upper }}</span>
+      </div>
+      <div class="flex-center" style="gap: 2rem; padding: 1rem 0;">
+        <div style="text-align: center; flex: 1;">
+          <div style="font-size: 3.5rem; line-height: 1;">{{ latest.flag1 }}</div>
+          <div style="font-weight: 800; font-family: Lexend; font-size: 1.1rem; margin-top: 8px;">{{ latest.team1 }}</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 3rem; font-weight: 900; font-family: Lexend; letter-spacing: -0.05em; color: white;">{{ latest.score1 }} - {{ latest.score2 }}</div>
+          <div class="muted" style="font-size: 0.75rem; margin-top: 4px; font-weight: 600;">{{ latest.timestamp }}</div>
+        </div>
+        <div style="text-align: center; flex: 1;">
+          <div style="font-size: 3.5rem; line-height: 1;">{{ latest.flag2 }}</div>
+          <div style="font-weight: 800; font-family: Lexend; font-size: 1.1rem; margin-top: 8px;">{{ latest.team2 }}</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# 1. Top Contenders (Card-based on mobile) #}
+    <div class="standard-card" style="grid-column: span 8;">
+      <div class="section-title">
+        <span>🏆 Top Contenders</span>
+        <a href="/standings" style="color: var(--primary); text-decoration: none; font-size: 0.8rem; font-weight: 700;">Full List →</a>
+      </div>
+      
+      <div class="leaderboard-cards">
+        {% set sorted_players = [] %}
+        {% for player in data.players %}
+          {% set _ = sorted_players.append({'name': player.name, 'pts': data.points.get(player.name, 0)}) %}
+        {% endfor %}
+        {% for p in sorted_players | sort(attribute='pts', reverse=True) | batch(3) | first %}
+        {% set rank = loop.index %}
+        {% set p_color = get_player_color(p.name) %}
+        <div class="player-card rank-{{ rank }}">
+          <div class="rank-badge">{{ rank }}</div>
+          <div class="avatar-sm" style="background: {{ p_color }};">{{ p.name[0] }}</div>
+          <div class="player-info">
+            <div class="player-name">{{ p.name }}</div>
+            <div class="player-meta">{{ data.ownership.get(p.name, [])|length }} Teams • {{ data.matches|length }} Matches</div>
+          </div>
+          <div class="player-pts-box">
+            <div class="player-pts-val">{{ p.pts }}</div>
+            <span class="player-pts-lbl">Points</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      
+      <table class="leaderboard-table">
+        <thead>
+          <tr><th>Rank</th><th>Player</th><th>Teams</th><th>Matches</th><th style="text-align:right">Total Points</th></tr>
+        </thead>
+        <tbody>
+          {% for p in sorted_players | sort(attribute='pts', reverse=True) | batch(5) | first %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td style="font-weight:700">{{ p.name }}</td>
+            <td>{{ data.ownership.get(p.name, [])|length }}</td>
+            <td>{{ player_matches.get(p.name, 0) }}</td>
+            <td style="text-align:right; font-weight:800; color:var(--primary)">{{ p.pts }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# 2. Prize Pool Card (Vertical on mobile) #}
+    <div class="standard-card" style="grid-column: span 4; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+      <div class="section-title" style="color: var(--accent-gold);">💰 Prize Pool</div>
+      <div style="margin-bottom: 2rem; text-align: center;">
+        <div style="font-size: 3.5rem; font-weight: 900; line-height: 1; color: var(--accent-gold); font-family: Lexend;">₹14K</div>
+        <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-muted); margin-top: 8px;">Tournament Rupees</div>
+      </div>
+
+      <div class="prize-grid">
+        <div class="stat-card" style="background: rgba(255,255,255,0.05); padding: 1rem;">
+          <div class="stat-lbl" style="margin-bottom: 4px;">🥇 1st (60%)</div>
+          <div class="stat-val" style="color: var(--accent-gold);">8,400</div>
+        </div>
+        <div class="stat-card" style="background: rgba(255,255,255,0.05); padding: 1rem;">
+          <div class="stat-lbl" style="margin-bottom: 4px;">🥈 2nd (40%)</div>
+          <div class="stat-val" style="color: var(--accent-silver);">5,600</div>
+        </div>
+      </div>
+    </div>
+
+    {# 3. Collapsible Squads #}
+    <div class="standard-card" style="grid-column: span 12;">
+      <div class="section-header">
+        <h2 class="section-title">🛡️ Player Squads</h2>
+        <div class="status-badge">Tap to Expand</div>
+      </div>
+      
+      {% for player_name, groups in player_teams_by_group.items() %}
+      {% set p_color = get_player_color(player_name) %}
+      <div class="squad-section" style="border-left: 4px solid {{ p_color }};">
+        <div class="squad-header" onclick="toggleSquad(this)">
+          <span class="toggle-icon">▼</span>
+          <div class="avatar-sm" style="background: {{ p_color }};">{{ player_name[0] }}</div>
+          <span class="player-name" style="flex:1; font-weight:700;">{{ player_name }}'s Teams</span>
+          <span class="badge success" style="font-size:0.7rem;">{{ data.points.get(player_name, 0) }} PTS</span>
+        </div>
+        <div class="squad-body">
+          {% for group_info in groups %}
+            {% for team in group_info.teams %}
+            <div class="team-chip">
+              <span>{{ team.flag }}</span>
+              <span>{{ team.name }}</span>
+              <span class="badge" style="font-size:0.5rem; background:rgba(255,255,255,0.1)">T{{ team.tier }}</span>
+            </div>
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>{# /.bento-grid #}
+
+</div>{# /.page-container #}
+
+<button class="fab" onclick="location.reload()">⚽</button>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSquad(header) {
+  header.classList.toggle('active');
+  const body = header.nextElementSibling;
+  body.classList.toggle('active');
+}
+
+function animateCounter(id, endValue, duration = 800) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  let start = 0;
+  const increment = endValue / (duration / 16);
+  const timer = setInterval(() => {
+    start += increment;
+    if (start >= endValue) {
+      el.textContent = endValue;
+      clearInterval(timer);
+    } else {
+      el.textContent = Math.floor(start);
+    }
+  }, 16);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  animateCounter('matchesPlayed', {{ data.matches | length }});
+  animateCounter('totPoints', {{ data.points.values() | sum }});
+  const finalDate = new Date('2026-07-19T00:00:00Z');
+  const diff = Math.ceil((finalDate - new Date()) / (1000 * 60 * 60 * 24));
+  animateCounter('daysLeft', diff > 0 ? diff : 0);
+});
+</script>
+{% endblock %}

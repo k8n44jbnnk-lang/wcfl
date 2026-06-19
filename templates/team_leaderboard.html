@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+
+<header class="hero-header">
+  <div class="hero-badge badge">📈 Team Analytics</div>
+  <h1 class="text-gradient" style="font-size: var(--font-h1);">Team Leaderboard</h1>
+  <p>Ranking all 48 national teams by fantasy performance.</p>
+</header>
+
+<div class="page-container">
+  
+  <div class="section-title">
+    <span>🌍 Global Ranking</span>
+    <div class="status-badge">48 Teams</div>
+  </div>
+
+  {# ── Desktop View (Table) ── #}
+  <div class="desktop-only standard-card" style="padding: 0; overflow: hidden; background: var(--bg-surface);">
+    <table class="lb-table-modern" style="border-spacing: 0; margin: 0;">
+      <thead>
+        <tr style="background: rgba(255,255,255,0.02);">
+          <th style="padding-left: 1.5rem; width: 60px;">Rank</th>
+          <th>National Team</th>
+          <th>Fantasy Owner</th>
+          <th style="text-align: center;">P</th>
+          <th style="text-align: center;">W</th>
+          <th style="text-align: center;">D</th>
+          <th style="text-align: center;">L</th>
+          <th style="text-align: right; padding-right: 1.5rem;">Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for team in teams %}
+        <tr class="lb-row-modern" style="background: transparent; border-bottom: 1px solid var(--border-light);">
+          <td style="padding-left: 1.5rem;"><div class="rank-circle" style="width: 24px; height: 24px; font-size: 0.7rem;">{{ loop.index }}</div></td>
+          <td>
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+              <span style="font-size:1.5rem; line-height:1;">{{ team.flag }}</span>
+              <span style="font-weight:700; font-size:0.95rem;">{{ team.name }}</span>
+            </div>
+          </td>
+          <td>
+            {% if team.owner != 'Unowned' %}
+            <div class="chip-modern" style="font-size: 0.75rem;">
+              <span>👤</span>
+              <span>{{ team.owner }}</span>
+            </div>
+            {% else %}
+            <span style="font-size: 0.75rem; color: var(--text-dim);">Unowned</span>
+            {% endif %}
+          </td>
+          <td style="text-align: center; font-weight: 600; color: var(--text-muted);">{{ team.played }}</td>
+          <td style="text-align: center; color: var(--success); font-weight: 600;">{{ team.won }}</td>
+          <td style="text-align: center; color: var(--text-muted);">{{ team.drawn }}</td>
+          <td style="text-align: center; color: var(--danger);">{{ team.lost }}</td>
+          <td style="text-align: right; padding-right: 1.5rem;">
+            <span style="font-size: 1.1rem; font-weight: 800; font-family: Lexend; color: var(--primary);">{{ team.points }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# ── Mobile View (Ultra-Optimized Cards) ── #}
+  <div class="mobile-only-grid">
+    {% for team in teams %}
+    <div class="team-mobile-card">
+      <div class="tmc-rank">{{ loop.index }}</div>
+      <div class="tmc-flag">{{ team.flag }}</div>
+      
+      <div class="tmc-info">
+        <div class="tmc-name">{{ team.name }}</div>
+        <div class="tmc-stats">
+          <span>P:{{ team.played }}</span>
+          <span class="success">W:{{ team.won }}</span>
+          <span>D:{{ team.drawn }}</span>
+          <span class="danger">L:{{ team.lost }}</span>
+        </div>
+        {% if team.owner != 'Unowned' %}
+        <div class="tmc-owner">👤 {{ team.owner }}</div>
+        {% endif %}
+      </div>
+
+      <div class="tmc-pts-box">
+        <div class="tmc-pts-val">{{ team.points }}</div>
+        <span class="tmc-pts-lbl">PTS</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+
+</div>{# /.page-container #}
+{% endblock %}

@@ -1,0 +1,1127 @@
+{
+  "league_name": "WC2026 Fantasy League",
+  "budget": 2000,
+  "players": [
+    {
+      "name": "Piyush"
+    },
+    {
+      "name": "Deepanshu"
+    },
+    {
+      "name": "Dima"
+    },
+    {
+      "name": "Bhavya"
+    },
+    {
+      "name": "Lalit"
+    },
+    {
+      "name": "Gabu"
+    },
+    {
+      "name": "Jai"
+    }
+  ],
+  "teams_per_player": 4,
+  "tiers": {
+    "1": [
+      "France",
+      "Spain",
+      "England",
+      "Germany",
+      "Portugal",
+      "Netherlands",
+      "Argentina",
+      "Brazil"
+    ],
+    "2": [
+      "Belgium",
+      "Croatia",
+      "Uruguay",
+      "Colombia",
+      "USA",
+      "Japan",
+      "Morocco",
+      "Senegal"
+    ],
+    "3": [
+      "Switzerland",
+      "Austria",
+      "South Korea",
+      "Mexico",
+      "Canada",
+      "Ecuador",
+      "Ivory Coast",
+      "Egypt"
+    ],
+    "4": [
+      "Norway",
+      "Scotland",
+      "Sweden",
+      "T\u00fcrkiye",
+      "Czechia",
+      "Bosnia and Herzegovina",
+      "Paraguay",
+      "Australia"
+    ],
+    "5": [
+      "Saudi Arabia",
+      "Iran",
+      "Ghana",
+      "Tunisia",
+      "Algeria",
+      "South Africa",
+      "Panama",
+      "Qatar"
+    ],
+    "6": [
+      "Jordan",
+      "Uzbekistan",
+      "Cape Verde",
+      "New Zealand",
+      "Cura\u00e7ao",
+      "Haiti",
+      "DR Congo",
+      "Iraq"
+    ]
+  },
+  "tier_prices": {
+    "1": 200,
+    "2": 150,
+    "3": 100,
+    "4": 70,
+    "5": 40,
+    "6": 20
+  },
+  "started": true,
+  "auction_done": true,
+  "budgets": {
+    "Piyush": 0,
+    "Deepanshu": 0,
+    "Dima": 0,
+    "Bhavya": 0,
+    "Lalit": 0,
+    "Gabu": 0,
+    "Jai": 250
+  },
+  "points": {
+    "Piyush": 19,
+    "Deepanshu": 20,
+    "Dima": 26,
+    "Bhavya": 3,
+    "Lalit": 14,
+    "Gabu": 7,
+    "Jai": 27
+  },
+  "ownership": {
+    "Piyush": [
+      "Brazil",
+      "Netherlands",
+      "Canada",
+      "Sweden"
+    ],
+    "Deepanshu": [
+      "Turkey",
+      "Japan",
+      "Argentina",
+      "Ivory Coast"
+    ],
+    "Dima": [
+      "USA",
+      "Iran",
+      "France",
+      "Austria"
+    ],
+    "Bhavya": [
+      "Ecuador",
+      "Uruguay",
+      "Portugal",
+      "Croatia"
+    ],
+    "Lalit": [
+      "Morocco",
+      "Norway",
+      "England",
+      "Egypt"
+    ],
+    "Gabu": [
+      "Belgium",
+      "Spain",
+      "Colombia",
+      "Algeria"
+    ],
+    "Jai": [
+      "Mexico",
+      "Switzerland",
+      "Germany",
+      "South Korea"
+    ]
+  },
+  "team_sold": {
+    "Brazil": "Piyush",
+    "Netherlands": "Piyush",
+    "Canada": "Piyush",
+    "Sweden": "Piyush",
+    "Japan": "Deepanshu",
+    "Argentina": "Deepanshu",
+    "Ivory Coast": "Deepanshu",
+    "USA": "Dima",
+    "Iran": "Dima",
+    "France": "Dima",
+    "Austria": "Dima",
+    "Ecuador": "Bhavya",
+    "Uruguay": "Bhavya",
+    "Portugal": "Bhavya",
+    "Croatia": "Bhavya",
+    "Morocco": "Lalit",
+    "Norway": "Lalit",
+    "England": "Lalit",
+    "Egypt": "Lalit",
+    "Belgium": "Gabu",
+    "Spain": "Gabu",
+    "Colombia": "Gabu",
+    "Algeria": "Gabu",
+    "Mexico": "Jai",
+    "Switzerland": "Jai",
+    "Germany": "Jai",
+    "South Korea": "Jai",
+    "T\u00fcrkiye": "Deepanshu"
+  },
+  "auction_queue": [],
+  "auction_idx": 0,
+  "current_bidder": 0,
+  "current_bid": 0,
+  "current_high_bidder": null,
+  "auction_active_bidders": [],
+  "auction_active_team": null,
+  "matches": [
+    {
+      "id": "0e86f5cd",
+      "team1": "Austria",
+      "team2": "Jordan",
+      "score1": 3,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Dima",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "Austria",
+          "points": 7,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (3)",
+              "pts": 3
+            }
+          ]
+        },
+        "team2": {
+          "name": "Jordan",
+          "points": 1,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "Austria 3\u20131 Jordan (group)"
+      },
+      "timestamp": "17 Jun 2026, 12:41",
+      "flag1": "\ud83c\udde6\ud83c\uddf9",
+      "flag2": "\ud83c\uddef\ud83c\uddf4",
+      "fixture_id": "537398"
+    },
+    {
+      "id": "6364f56f",
+      "team1": "Argentina",
+      "team2": "Algeria",
+      "score1": 3,
+      "score2": 0,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Deepanshu",
+      "owner2": "Gabu",
+      "result": {
+        "team1": {
+          "name": "Argentina",
+          "points": 9,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (3)",
+              "pts": 3
+            },
+            {
+              "event": "Clean sheet",
+              "pts": 2
+            }
+          ]
+        },
+        "team2": {
+          "name": "Algeria",
+          "points": 0,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            }
+          ]
+        },
+        "summary": "Argentina 3\u20130 Algeria (group)"
+      },
+      "timestamp": "17 Jun 2026, 03:13",
+      "flag1": "\ud83c\udde6\ud83c\uddf7",
+      "flag2": "\ud83c\udde9\ud83c\uddff",
+      "fixture_id": "537397"
+    },
+    {
+      "id": "ae2c8192",
+      "team1": "Iraq",
+      "team2": "Norway",
+      "score1": 1,
+      "score2": 4,
+      "stage": "group",
+      "extra": {},
+      "owner1": null,
+      "owner2": "Lalit",
+      "result": {
+        "team1": {
+          "name": "Iraq",
+          "points": 1,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "team2": {
+          "name": "Norway",
+          "points": 8,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (4)",
+              "pts": 4
+            }
+          ]
+        },
+        "summary": "Iraq 1\u20134 Norway (group)"
+      },
+      "timestamp": "17 Jun 2026, 02:08",
+      "flag1": "\ud83c\uddee\ud83c\uddf6",
+      "flag2": "\ud83c\uddf3\ud83c\uddf4",
+      "fixture_id": "537392"
+    },
+    {
+      "id": "d6d7a787",
+      "team1": "France",
+      "team2": "Senegal",
+      "score1": 3,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Dima",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "France",
+          "points": 7,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (3)",
+              "pts": 3
+            }
+          ]
+        },
+        "team2": {
+          "name": "Senegal",
+          "points": 1,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "France 3\u20131 Senegal (group)"
+      },
+      "timestamp": "16 Jun 2026, 19:00",
+      "flag1": "\ud83c\uddeb\ud83c\uddf7",
+      "flag2": "\ud83c\uddf8\ud83c\uddf3",
+      "fixture_id": "537391"
+    },
+    {
+      "id": "a37b0a94",
+      "team1": "Iran",
+      "team2": "New Zealand",
+      "score1": 2,
+      "score2": 2,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Dima",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "Iran",
+          "points": 4,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (2)",
+              "pts": 2
+            }
+          ]
+        },
+        "team2": {
+          "name": "New Zealand",
+          "points": 4,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (2)",
+              "pts": 2
+            }
+          ]
+        },
+        "summary": "Iran 2\u20132 New Zealand (group)"
+      },
+      "timestamp": "16 Jun 2026, 01:00",
+      "flag1": "\ud83c\uddee\ud83c\uddf7",
+      "flag2": "\ud83c\uddf3\ud83c\uddff",
+      "fixture_id": "537364"
+    },
+    {
+      "id": "a8535d20",
+      "team1": "Saudi Arabia",
+      "team2": "Uruguay",
+      "score1": 1,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": null,
+      "owner2": "Bhavya",
+      "result": {
+        "team1": {
+          "name": "Saudi Arabia",
+          "points": 3,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "team2": {
+          "name": "Uruguay",
+          "points": 3,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "Saudi Arabia 1\u20131 Uruguay (group)"
+      },
+      "timestamp": "15 Jun 2026, 22:00",
+      "flag1": "\ud83c\uddf8\ud83c\udde6",
+      "flag2": "\ud83c\uddfa\ud83c\uddfe",
+      "fixture_id": "537370"
+    },
+    {
+      "id": "cbd090ec",
+      "team1": "Belgium",
+      "team2": "Egypt",
+      "score1": 1,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Gabu",
+      "owner2": "Lalit",
+      "result": {
+        "team1": {
+          "name": "Belgium",
+          "points": 3,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "team2": {
+          "name": "Egypt",
+          "points": 3,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "Belgium 1\u20131 Egypt (group)"
+      },
+      "timestamp": "15 Jun 2026, 19:00",
+      "flag1": "\ud83c\udde7\ud83c\uddea",
+      "flag2": "\ud83c\uddea\ud83c\uddec",
+      "fixture_id": "537363"
+    },
+    {
+      "id": "9e743af0",
+      "team1": "Spain",
+      "team2": "Cape Verde Islands",
+      "score1": 0,
+      "score2": 0,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Gabu",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "Spain",
+          "points": 4,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Clean sheet",
+              "pts": 2
+            }
+          ]
+        },
+        "team2": {
+          "name": "Cape Verde Islands",
+          "points": 4,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Clean sheet",
+              "pts": 2
+            }
+          ]
+        },
+        "summary": "Spain 0\u20130 Cape Verde Islands (group)"
+      },
+      "timestamp": "15 Jun 2026, 16:00",
+      "flag1": "\ud83c\uddea\ud83c\uddf8",
+      "flag2": "\ud83c\udff3",
+      "fixture_id": "537369"
+    },
+    {
+      "id": "3f9cee52",
+      "team1": "Sweden",
+      "team2": "Tunisia",
+      "score1": 5,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Piyush",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "Sweden",
+          "points": 9,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (5)",
+              "pts": 5
+            }
+          ]
+        },
+        "team2": {
+          "name": "Tunisia",
+          "points": 1,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "Sweden 5\u20131 Tunisia (group)"
+      },
+      "timestamp": "15 Jun 2026, 04:04",
+      "flag1": "\ud83c\uddf8\ud83c\uddea",
+      "flag2": "\ud83c\uddf9\ud83c\uddf3",
+      "fixture_id": "537358"
+    },
+    {
+      "id": "24a84163",
+      "team1": "Ivory Coast",
+      "team2": "Ecuador",
+      "score1": 1,
+      "score2": 0,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Deepanshu",
+      "owner2": "Bhavya",
+      "result": {
+        "team1": {
+          "name": "Ivory Coast",
+          "points": 7,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            },
+            {
+              "event": "Clean sheet",
+              "pts": 2
+            }
+          ]
+        },
+        "team2": {
+          "name": "Ecuador",
+          "points": 0,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            }
+          ]
+        },
+        "summary": "Ivory Coast 1\u20130 Ecuador (group)"
+      },
+      "timestamp": "14 Jun 2026, 23:00",
+      "flag1": "\ud83c\udde8\ud83c\uddee",
+      "flag2": "\ud83c\uddea\ud83c\udde8",
+      "fixture_id": "537352"
+    },
+    {
+      "id": "2d161764",
+      "team1": "Netherlands",
+      "team2": "Japan",
+      "score1": 2,
+      "score2": 2,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Piyush",
+      "owner2": "Deepanshu",
+      "result": {
+        "team1": {
+          "name": "Netherlands",
+          "points": 4,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (2)",
+              "pts": 2
+            }
+          ]
+        },
+        "team2": {
+          "name": "Japan",
+          "points": 4,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (2)",
+              "pts": 2
+            }
+          ]
+        },
+        "summary": "Netherlands 2\u20132 Japan (group)"
+      },
+      "timestamp": "14 Jun 2026, 22:10",
+      "flag1": "\ud83c\uddf3\ud83c\uddf1",
+      "flag2": "\ud83c\uddef\ud83c\uddf5",
+      "fixture_id": "537357"
+    },
+    {
+      "id": "c249e7c7",
+      "team1": "Germany",
+      "team2": "Cura\u00e7ao",
+      "score1": 7,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Jai",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "Germany",
+          "points": 11,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (7)",
+              "pts": 7
+            }
+          ]
+        },
+        "team2": {
+          "name": "Cura\u00e7ao",
+          "points": 1,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "Germany 7\u20131 Cura\u00e7ao (group)"
+      },
+      "timestamp": "14 Jun 2026, 17:00",
+      "flag1": "\ud83c\udde9\ud83c\uddea",
+      "flag2": "\ud83c\udde8\ud83c\uddfc",
+      "fixture_id": "537351"
+    },
+    {
+      "id": "0742d4b9",
+      "team1": "Australia",
+      "team2": "T\u00fcrkiye",
+      "score1": 2,
+      "score2": 0,
+      "stage": "group",
+      "extra": {},
+      "owner1": null,
+      "owner2": "Deepanshu",
+      "result": {
+        "team1": {
+          "name": "Australia",
+          "points": 8,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (2)",
+              "pts": 2
+            },
+            {
+              "event": "Clean sheet",
+              "pts": 2
+            }
+          ]
+        },
+        "team2": {
+          "name": "T\u00fcrkiye",
+          "points": 0,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            }
+          ]
+        },
+        "summary": "Australia 2\u20130 T\u00fcrkiye (group)"
+      },
+      "timestamp": "14 Jun 2026, 04:00",
+      "flag1": "\ud83c\udde6\ud83c\uddfa",
+      "flag2": "\ud83c\uddf9\ud83c\uddf7",
+      "fixture_id": "537346"
+    },
+    {
+      "id": "a88c0dac",
+      "team1": "Haiti",
+      "team2": "Scotland",
+      "score1": 0,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": null,
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "Haiti",
+          "points": 0,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            }
+          ]
+        },
+        "team2": {
+          "name": "Scotland",
+          "points": 7,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            },
+            {
+              "event": "Clean sheet",
+              "pts": 2
+            }
+          ]
+        },
+        "summary": "Haiti 0\u20131 Scotland (group)"
+      },
+      "timestamp": "14 Jun 2026, 01:00",
+      "flag1": "\ud83c\udded\ud83c\uddf9",
+      "flag2": "\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc73\udb40\udc63\udb40\udc74\udb40\udc7f",
+      "fixture_id": "537340"
+    },
+    {
+      "id": "8e94d296",
+      "team1": "Brazil",
+      "team2": "Morocco",
+      "score1": 1,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Piyush",
+      "owner2": "Lalit",
+      "result": {
+        "team1": {
+          "name": "Brazil",
+          "points": 3,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "team2": {
+          "name": "Morocco",
+          "points": 3,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "Brazil 1\u20131 Morocco (group)"
+      },
+      "timestamp": "13 Jun 2026, 22:00",
+      "flag1": "\ud83c\udde7\ud83c\uddf7",
+      "flag2": "\ud83c\uddf2\ud83c\udde6",
+      "fixture_id": "537339"
+    },
+    {
+      "id": "82ec8bc6",
+      "team1": "Qatar",
+      "team2": "Switzerland",
+      "score1": 1,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": null,
+      "owner2": "Jai",
+      "result": {
+        "team1": {
+          "name": "Qatar",
+          "points": 3,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "team2": {
+          "name": "Switzerland",
+          "points": 3,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "Qatar 1\u20131 Switzerland (group)"
+      },
+      "timestamp": "13 Jun 2026, 19:00",
+      "flag1": "\ud83c\uddf6\ud83c\udde6",
+      "flag2": "\ud83c\udde8\ud83c\udded",
+      "fixture_id": "537334"
+    },
+    {
+      "id": "d913692c",
+      "team1": "USA",
+      "team2": "Paraguay",
+      "score1": 4,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Dima",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "USA",
+          "points": 8,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (4)",
+              "pts": 4
+            }
+          ]
+        },
+        "team2": {
+          "name": "Paraguay",
+          "points": 1,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "USA 4\u20131 Paraguay (group)"
+      },
+      "timestamp": "13 Jun 2026, 01:00",
+      "flag1": "\ud83c\uddfa\ud83c\uddf8",
+      "flag2": "\ud83c\uddf5\ud83c\uddfe",
+      "fixture_id": "537345"
+    },
+    {
+      "id": "e7f8c844",
+      "team1": "Canada",
+      "team2": "Bosnia-Herzegovina",
+      "score1": 1,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Piyush",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "Canada",
+          "points": 3,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "team2": {
+          "name": "Bosnia-Herzegovina",
+          "points": 3,
+          "breakdown": [
+            {
+              "event": "Draw",
+              "pts": 2
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "Canada 1\u20131 Bosnia-Herzegovina (group)"
+      },
+      "timestamp": "12 Jun 2026, 19:00",
+      "flag1": "\ud83c\udde8\ud83c\udde6",
+      "flag2": "\ud83c\udff3",
+      "fixture_id": "537333"
+    },
+    {
+      "id": "22bc86a6",
+      "team1": "South Korea",
+      "team2": "Czechia",
+      "score1": 2,
+      "score2": 1,
+      "stage": "group",
+      "extra": {},
+      "owner1": "Jai",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "South Korea",
+          "points": 6,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (2)",
+              "pts": 2
+            }
+          ]
+        },
+        "team2": {
+          "name": "Czechia",
+          "points": 1,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            },
+            {
+              "event": "Goals scored (1)",
+              "pts": 1
+            }
+          ]
+        },
+        "summary": "South Korea 2\u20131 Czechia (group)"
+      },
+      "timestamp": "12 Jun 2026, 02:00",
+      "flag1": "\ud83c\uddf0\ud83c\uddf7",
+      "flag2": "\ud83c\udde8\ud83c\uddff",
+      "fixture_id": "537328"
+    },
+    {
+      "id": "375c5f77",
+      "team1": "Mexico",
+      "team2": "South Africa",
+      "score1": 2,
+      "score2": 0,
+      "stage": "group",
+      "extra": {
+        "red_card_t1": 1
+      },
+      "owner1": "Jai",
+      "owner2": null,
+      "result": {
+        "team1": {
+          "name": "Mexico",
+          "points": 7,
+          "breakdown": [
+            {
+              "event": "Win (GROUP)",
+              "pts": 4
+            },
+            {
+              "event": "Goals scored (2)",
+              "pts": 2
+            },
+            {
+              "event": "Clean sheet",
+              "pts": 2
+            },
+            {
+              "event": "Red cards (1)",
+              "pts": -1
+            }
+          ]
+        },
+        "team2": {
+          "name": "South Africa",
+          "points": 0,
+          "breakdown": [
+            {
+              "event": "Loss",
+              "pts": 0
+            }
+          ]
+        },
+        "summary": "Mexico 2\u20130 South Africa (group)"
+      },
+      "timestamp": "12 Jun 2026, 02:52",
+      "flag1": "\ud83c\uddf2\ud83c\uddfd",
+      "flag2": "\ud83c\uddff\ud83c\udde6",
+      "fixture_id": "537327"
+    }
+  ]
+}

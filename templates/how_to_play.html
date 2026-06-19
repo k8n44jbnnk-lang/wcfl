@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% block content %}
+
+{# ── Hero ── #}
+<section class="hero-section" style="padding: 4rem 1.5rem 3rem; text-align: center;">
+  <div class="container hero-inner" style="max-width: 800px;">
+    <div class="hero-badge">FIFA World Cup 2026 · Scoring Matrix</div>
+    <h1 class="hero-title text-gradient" style="font-size: 3.5rem;">Points Matrix</h1>
+    <p class="hero-subtitle" style="font-size: 1.1rem; margin: 0 auto 2.5rem;">How your teams earn points and climb the ranks.</p>
+  </div>
+</section>
+
+<div class="container" style="max-width: 1000px;">
+
+  {# ── Prize Pool Section ── #}
+  <div class="section-header">
+    <h2 class="section-title">💰 Winning Prize Pool</h2>
+  </div>
+  
+  <div class="card" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; padding: 3rem; border-radius: var(--radius-xl); text-align: center; margin-bottom: 4rem;">
+    <div style="margin-bottom: 2.5rem;">
+      <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.6; margin-bottom: 0.5rem;">Total Tournament Pool</div>
+      <div style="font-size: 5rem; font-weight: 800; color: var(--accent-gold); font-family: Lexend; line-height: 1;">₹14,000</div>
+      <div style="font-size: 1.25rem; font-weight: 500; opacity: 0.8; margin-top: 0.5rem;">Rupees</div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2rem;">
+      <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -15px; right: -15px; font-size: 64px; opacity: 0.05;">🥇</div>
+        <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.5; margin-bottom: 0.75rem;">Champion (60%)</div>
+        <div style="font-size: 3rem; font-weight: 800; color: var(--accent-gold); font-family: Lexend;">₹8,400</div>
+      </div>
+      <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -15px; right: -15px; font-size: 64px; opacity: 0.05;">🥈</div>
+        <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.5; margin-bottom: 0.75rem;">Runner-up (40%)</div>
+        <div style="font-size: 3rem; font-weight: 800; color: var(--accent-silver); font-family: Lexend;">₹5,600</div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Win Bonuses Path ── #}
+  <div class="section-header">
+    <h2 class="section-title">🚀 Win Bonus Progression</h2>
+  </div>
+  
+  <div class="card" style="margin-bottom: 3rem; padding: 2rem; overflow-x: auto;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; height: 200px; gap: 10px; min-width: 600px; position: relative;">
+      {# Group #}
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        <div style="font-weight: 800; color: var(--primary);">+{{ pts.win.group }}</div>
+        <div style="width: 100%; height: 40px; background: var(--primary); border-radius: 4px; opacity: 0.3;"></div>
+        <div class="stat-label">Group</div>
+      </div>
+      {# R32 #}
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        <div style="font-weight: 800; color: var(--primary);">+{{ pts.win.r32 }}</div>
+        <div style="width: 100%; height: 60px; background: var(--primary); border-radius: 4px; opacity: 0.5;"></div>
+        <div class="stat-label">R32</div>
+      </div>
+      {# R16 #}
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        <div style="font-weight: 800; color: var(--primary);">+{{ pts.win.r16 }}</div>
+        <div style="width: 100%; height: 90px; background: var(--primary); border-radius: 4px; opacity: 0.7;"></div>
+        <div class="stat-label">R16</div>
+      </div>
+      {# QF #}
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        <div style="font-weight: 800; color: var(--primary);">+{{ pts.win.qf }}</div>
+        <div style="width: 100%; height: 120px; background: var(--primary); border-radius: 4px; opacity: 0.8;"></div>
+        <div class="stat-label">QF</div>
+      </div>
+      {# SF #}
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        <div style="font-weight: 800; color: var(--primary);">+{{ pts.win.sf }}</div>
+        <div style="width: 100%; height: 150px; background: var(--primary); border-radius: 4px; opacity: 0.9;"></div>
+        <div class="stat-label">SF</div>
+      </div>
+      {# Final #}
+      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+        <div style="font-weight: 800; color: var(--accent-gold);">+{{ pts.win.final }}</div>
+        <div style="width: 100%; height: 180px; background: var(--accent-gold); border-radius: 4px; box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);"></div>
+        <div class="stat-label" style="color: var(--accent-gold);">Final</div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Match Events ── #}
+  <div class="section-header">
+    <h2 class="section-title">⚽ Match Events</h2>
+  </div>
+
+  <div class="grid-bento" style="margin-bottom: 3rem;">
+    <div class="card" style="grid-column: span 12;">
+       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+          <div class="stat-pill" style="display: flex; justify-content: space-between; align-items: center;">
+             <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5rem;">🥅</span>
+                <span style="font-weight: 700;">Goal Scored</span>
+             </div>
+             <div class="chip-modern" style="color: var(--success);">+{{ pts.goal }} pt</div>
+          </div>
+          <div class="stat-pill" style="display: flex; justify-content: space-between; align-items: center;">
+             <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5rem;">🧼</span>
+                <span style="font-weight: 700;">Clean Sheet</span>
+             </div>
+             <div class="chip-modern" style="color: var(--success);">+{{ pts.clean_sheet }} pts</div>
+          </div>
+          <div class="stat-pill" style="display: flex; justify-content: space-between; align-items: center;">
+             <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5rem;">🤝</span>
+                <span style="font-weight: 700;">Draw (Group Only)</span>
+             </div>
+             <div class="chip-modern" style="color: var(--success);">+{{ pts.draw }} pts</div>
+          </div>
+          <div class="stat-pill" style="display: flex; justify-content: space-between; align-items: center;">
+             <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5rem;">🎩</span>
+                <span style="font-weight: 700;">Hat-trick Bonus</span>
+             </div>
+             <div class="chip-modern" style="color: var(--success);">+{{ pts.hattrick }} pts</div>
+          </div>
+          <div class="stat-pill" style="display: flex; justify-content: space-between; align-items: center;">
+             <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5rem;">🟥</span>
+                <span style="font-weight: 700;">Red Card</span>
+             </div>
+             <div class="chip-modern" style="color: var(--danger);">{{ pts.red_card }} pt</div>
+          </div>
+          <div class="stat-pill" style="display: flex; justify-content: space-between; align-items: center;">
+             <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5rem;">🎯</span>
+                <span style="font-weight: 700;">Penalty Shootout Win</span>
+             </div>
+             <div class="chip-modern" style="color: var(--success);">+{{ pts.penalties }} pts</div>
+          </div>
+       </div>
+    </div>
+  </div>
+
+  {# ── Potential Earnings Calculator ── #}
+  <div class="section-header">
+    <h2 class="section-title">🧮 Potential Earnings Calculator</h2>
+  </div>
+  
+  <div class="card" style="background: var(--bg-surface);">
+    <p class="text-muted" style="margin-bottom: 1.5rem;">Select a team to see how many points they could earn if they win the whole tournament.</p>
+    
+    <div class="form-group" style="max-width: 400px;">
+        <label>Select Team</label>
+        <select id="calcTeam" onchange="calculateEarnings()">
+            <option value="">Choose a team...</option>
+            {% for t in teams %}<option value="{{ t.name }}">{{ t.flag }} {{ t.name }}</option>{% endfor %}
+        </select>
+    </div>
+
+    <div id="calcResults" style="display: none; margin-top: 2rem; border-top: 1px solid var(--border-light); padding-top: 2rem;">
+        <div class="grid-bento">
+            <div class="card" style="grid-column: span 12; background: var(--primary-glow);">
+                <div style="text-align: center;">
+                    <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--primary); margin-bottom: 0.5rem;">Maximum Possible Points</div>
+                    <div id="calcTotal" style="font-size: 4rem; font-weight: 900; font-family: Lexend; color: white;">35</div>
+                    <div style="font-size: 0.9rem; color: var(--text-muted);">Points if they win every match + average modifiers</div>
+                </div>
+            </div>
+            
+            <div class="card" style="grid-column: span 6;">
+                <h3 style="font-size: 0.9rem; margin-bottom: 1rem;">Tournament Path</h3>
+                <div id="calcPath" style="display: grid; gap: 8px;">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <div class="card" style="grid-column: span 6;">
+                <h3 style="font-size: 0.9rem; margin-bottom: 1rem;">Early Exit Scenarios</h3>
+                <div id="calcExits" style="display: grid; gap: 8px;">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
+</div>{# /.container #}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const pts = {
+    win: {
+        group: {{ pts.win.group }},
+        r32: {{ pts.win.r32 }},
+        r16: {{ pts.win.r16 }},
+        qf: {{ pts.win.qf }},
+        sf: {{ pts.win.sf }},
+        final: {{ pts.win.final }}
+    },
+    goal: {{ pts.goal }},
+    cs: {{ pts.clean_sheet }}
+};
+
+function calculateEarnings() {
+    const team = document.getElementById('calcTeam').value;
+    const res = document.getElementById('calcResults');
+    if (!team) { res.style.display = 'none'; return; }
+    
+    res.style.display = 'block';
+    
+    // Path calculation (assuming 3 group wins + 5 knockout wins)
+    const stages = ['group', 'group', 'group', 'r32', 'r16', 'qf', 'sf', 'final'];
+    let pathHtml = '';
+    let total = 0;
+    
+    stages.forEach((s, i) => {
+        const val = pts.win[s];
+        total += val;
+        pathHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+                <span class="text-muted">${i < 3 ? 'Group MD' + (i+1) : s.toUpperCase()}</span>
+                <span style="font-weight:700; color:var(--success);">+${val}</span>
+            </div>
+        `;
+    });
+    
+    // Add assumed modifiers (e.g., 8 goals + 3 clean sheets)
+    const modTotal = (8 * pts.goal) + (3 * pts.cs);
+    total += modTotal;
+    pathHtml += `
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; border-top:1px solid var(--border-light); margin-top:4px; padding-top:4px;">
+            <span class="text-muted">Est. Goals & CS</span>
+            <span style="font-weight:700; color:var(--success);">+${modTotal}</span>
+        </div>
+    `;
+
+    document.getElementById('calcPath').innerHTML = pathHtml;
+    document.getElementById('calcTotal').textContent = total;
+    
+    // Exit scenarios
+    let exitHtml = '';
+    const exitStages = [
+        { name: 'Group Stage Exit', pts: (1 * pts.win.group) + (2 * pts.goal) },
+        { name: 'R32 Exit', pts: (3 * pts.win.group) + (4 * pts.goal) + (1 * pts.cs) },
+        { name: 'R16 Exit', pts: (3 * pts.win.group) + pts.win.r32 + (5 * pts.goal) + (2 * pts.cs) },
+        { name: 'Quarter-final Exit', pts: (3 * pts.win.group) + pts.win.r32 + pts.win.r16 + (7 * pts.goal) + (2 * pts.cs) }
+    ];
+    
+    exitStages.forEach(e => {
+        exitHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; background:rgba(255,255,255,0.02); padding:8px; border-radius:6px;">
+                <span>${e.name}</span>
+                <span style="font-weight:800; color:var(--primary);">${e.pts} PTS</span>
+            </div>
+        `;
+    });
+    document.getElementById('calcExits').innerHTML = exitHtml;
+}
+</script>
+{% endblock %}

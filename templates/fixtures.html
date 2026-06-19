@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% macro team_flag(name) %}{%- for t in teams %}{% if t.name == name %}{{ t.flag }}{% endif %}{% endfor -%}{% endmacro %}
+
+<section class="hero-section" style="padding: 2.5rem 1.5rem 2rem;">
+  <div class="container hero-inner">
+    <div class="hero-copy">
+      <div class="hero-badge">⚽ World Cup Central</div>
+      <h1 class="hero-title text-gradient">Tournament Hub</h1>
+      <p class="hero-subtitle">Real-time group standings, results, and the road to the final.</p>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+
+  {# ── Group Stage Standings ── #}
+  <div class="section-header">
+    <h2 class="section-title">📊 Group Standings</h2>
+    <div class="group-selector-pills">
+      {% for letter in "ABCDEFGHIJKL"|list %}
+      <a href="#group-{{ letter }}" class="group-pill">{{ letter }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="group-grid" style="margin-bottom: 3rem;">
+    {% for letter, table in groups.items() %}
+    <div class="card group-card" id="group-{{ letter }}" style="padding: 0; overflow: hidden;">
+      <div style="background: var(--bg-accent); padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between;">
+        <h3 style="margin: 0; font-size: 1rem;">Group {{ letter }}</h3>
+      </div>
+      <table class="group-table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="text-align: left; font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase;">
+            <th style="padding: 0.75rem 1rem;">Team</th>
+            <th style="text-align: center;">P</th>
+            <th style="text-align: center;">GD</th>
+            <th style="text-align: right; padding-right: 1rem;">PTS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in table %}
+          {% set owner = data.team_sold.get(row.team) %}
+          <tr style="border-bottom: 1px solid var(--border-light); {% if owner %}border-left: 3px solid {{ get_player_color(owner) }}; background: rgba(255,255,255,0.02);{% endif %}">
+            <td style="padding: 0.75rem 1rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-weight: 700; font-size: 0.75rem; color: var(--text-dim); width: 12px;">{{ row.position }}</span>
+                <span style="font-size: 1.1rem;">{{ team_flag(row.team) }}</span>
+                <span style="font-weight: 600; font-size: 0.85rem;">{{ row.team }}</span>
+              </div>
+            </td>
+            <td style="text-align: center; font-size: 0.8rem;">{{ row.played }}</td>
+            <td style="text-align: center; font-size: 0.8rem;">{{ row.gd }}</td>
+            <td style="text-align: right; padding-right: 1rem; font-weight: 800; color: var(--primary);">{{ row.pts }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── Knockout Bracket ── #}
+  <div class="section-header">
+    <h2 class="section-title">🏆 Tournament Bracket</h2>
+    <div class="status-badge">Swipe to Scroll</div>
+  </div>
+  
+  <div class="bracket-wrapper">
+    <div class="bracket-container">
+      {% for section in knockout_sections if section.title != 'Third-place playoff' %}
+      <div class="bracket-round">
+        <div class="stat-label" style="text-align: center; margin-bottom: 1rem; color: var(--primary);">{{ section.title }}</div>
+        {% for item in section.matches %}
+        {% set is_owned = (item.record and (item.record.owner1 or item.record.owner2)) %}
+        <div class="bracket-match-card {% if is_owned %}is-owned{% endif %}" onclick="if('{{ item.record.id if item.record else '' }}') window.location='/match/{{ item.record.id if item.record else '' }}'">
+          <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-dim); margin-bottom: 4px;">MATCH {{ item.match_num }}</div>
+          {% if item.record %}
+            <div class="bracket-team-line {% if item.record.score1 > item.record.score2 %}winner{% endif %}">
+              <span>{{ team_flag(item.record.team1) }} {{ item.record.team1 }}</span>
+              <span>{{ item.record.score1 }}</span>
+            </div>
+            <div class="bracket-team-line {% if item.record.score2 > item.record.score1 %}winner{% endif %}">
+              <span>{{ team_flag(item.record.team2) }} {{ item.record.team2 }}</span>
+              <span>{{ item.record.score2 }}</span>
+            </div>
+          {% else %}
+            <div class="bracket-team-line" style="opacity: 0.4;"><span>{{ item.left_label }}</span><span>-</span></div>
+            <div class="bracket-team-line" style="opacity: 0.4;"><span>{{ item.right_label }}</span><span>-</span></div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>{# /.container #}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function showMatchDetails(matchId) {
+  if (!matchId) return;
+  const overlay = document.getElementById('matchModal');
+  const body = document.getElementById('modalBody');
+  overlay.style.display = 'flex';
+  body.innerHTML = '<div style="text-align:center;padding:2rem;"><div class="status-badge">Loading breakdown...</div></div>';
+  
+  try {
+    const resp = await fetch('/api/data');
+    const data = await resp.json();
+    const m = data.matches.find(m => m.id === matchId);
+    
+    if (!m) {
+      body.innerHTML = '<div class="status-badge">Match not found.</div>';
+      return;
+    }
+
+    let html = `
+      <div style="text-align:center; margin-bottom:2rem;">
+        <div class="status-badge" style="margin-bottom:1rem;">${m.stage.toUpperCase()}</div>
+        <div style="display:flex; align-items:center; justify-content:center; gap:1.5rem;">
+          <div style="text-align:center">
+            <div style="font-size:2.5rem">${m.flag1}</div>
+            <div style="font-weight:800; font-family:Lexend; font-size:0.9rem;">${m.team1}</div>
+            <div class="chip-modern" style="font-size:0.6rem; margin-top:4px;">👤 ${m.owner1 || 'Unowned'}</div>
+          </div>
+          <div style="font-family:Lexend; font-weight:900; font-size:2rem; color:var(--primary);">${m.score1} - ${m.score2}</div>
+          <div style="text-align:center">
+            <div style="font-size:2.5rem">${m.flag2}</div>
+            <div style="font-weight:800; font-family:Lexend; font-size:0.9rem;">${m.team2}</div>
+            <div class="chip-modern" style="font-size:0.6rem; margin-top:4px;">👤 ${m.owner2 || 'Unowned'}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="grid-bento">
+        <div class="card" style="grid-column: span 12; background:rgba(255,255,255,0.02); padding:1rem;">
+          <h3 style="font-size:0.75rem; text-transform:uppercase; color:var(--text-dim); margin-bottom:1rem;">Points Attribution</h3>
+          
+          <div style="display:grid; gap:1.5rem;">
+            <div>
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:0.75rem;">
+                <span style="font-size:1.2rem">${m.flag1}</span>
+                <span style="font-weight:700; font-size:0.85rem;">${m.team1} Breakdown</span>
+              </div>
+              ${m.result.team1.breakdown.map(b => `
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
+                  <span style="color:var(--text-muted)">${b.event}</span>
+                  <span style="font-weight:700; color:${b.pts >= 0 ? 'var(--success)' : 'var(--danger)'}">${b.pts >= 0 ? '+' : ''}${b.pts}</span>
+                </div>
+              `).join('')}
+            </div>
+            
+            <div style="border-top:1px solid var(--border-light); padding-top:1rem;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:0.75rem;">
+                <span style="font-size:1.2rem">${m.flag2}</span>
+                <span style="font-weight:700; font-size:0.85rem;">${m.team2} Breakdown</span>
+              </div>
+              ${m.result.team2.breakdown.map(b => `
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
+                  <span style="color:var(--text-muted)">${b.event}</span>
+                  <span style="font-weight:700; color:${b.pts >= 0 ? 'var(--success)' : 'var(--danger)'}">${b.pts >= 0 ? '+' : ''}${b.pts}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    body.innerHTML = html;
+  } catch (e) {
+    body.innerHTML = '<div class="status-badge">Error loading breakdown.</div>';
+  }
+}
+
+function closeModal() {
+  document.getElementById('matchModal').style.display = 'none';
+}
+
+// Smooth scroll for group pills
+document.querySelectorAll('.group-pill').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    const targetId = this.getAttribute('href');
+    const targetEl = document.querySelector(targetId);
+    if (targetEl) {
+      const offset = 80;
+      const targetPosition = targetEl.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+      
+      // Update active state
+      document.querySelectorAll('.group-pill').forEach(p => p.style.borderColor = 'var(--border-light)');
+      this.style.borderColor = 'var(--primary)';
+    }
+  });
+});
+</script>
+{% endblock %}

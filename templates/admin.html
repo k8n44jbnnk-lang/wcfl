@@ -1,0 +1,1456 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="hero-section" style="padding: 1.5rem 1.5rem 1.25rem;">
+  <div class="container hero-inner" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="hero-copy">
+      <div class="hero-badge">⚙️ System Control</div>
+      <h1 class="hero-title text-gradient" style="font-size: 1.5rem;">League Administration</h1>
+    </div>
+    <a href="/admin/logout" class="btn-modern btn-secondary-modern">Authorize Exit</a>
+  </div>
+</section>
+
+<div class="tabs-bar">
+  <button class="tab-btn" data-tab="setup" style="display:none;">Setup</button>
+  <button class="tab-btn" data-tab="tiers" style="display:none;">Tiers</button>
+  <button class="tab-btn" data-tab="auction" style="display:none;">Auction</button>
+  <button class="tab-btn active" data-tab="matches">Matches</button>
+  <button class="tab-btn" data-tab="fixtures">Fixtures</button>
+  <button class="tab-btn" data-tab="points">Points</button>
+  <button class="tab-btn" data-tab="danger">Danger Zone</button>
+</div>
+
+<div class="container">
+
+<!-- ═══ SETUP ═══ -->
+<section id="tab-setup" class="tab-section">
+  <div class="card">
+    <h2>League Setup</h2>
+    <form id="adminSetupForm" onsubmit="adminSaveSetup(event)">
+    <div class="grid2">
+      <div class="form-group">
+        <label>League name</label>
+        <input id="adminLeagueName" type="text" value="{{ data.league_name }}"/>
+      </div>
+      <div class="form-group">
+        <label>Budget per player (rupees)</label>
+        <input id="adminBudget" type="number" value="{{ data.budget }}" min="200" step="100"/>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:1rem">
+      <div class="row-between">
+        <label>Players (2–10)</label>
+        <button type="button" class="btn-sm" id="adminAddPlayerBtn">+ Add player</button>
+      </div>
+      <div id="adminPlayerList">
+        {% for p in data.players %}
+        <div class="player-input-row" data-idx="{{ loop.index0 }}">
+          <input type="text" class="player-name-input" value="{{ p.name }}"/>
+          <button type="button" class="btn-danger-sm js-remove-player">✕</button>
+        </div>
+        {% else %}
+        <div class="player-input-row" data-idx="0"><input type="text" class="player-name-input" value="lalit"/><button type="button" class="btn-danger-sm js-remove-player">✕</button></div>
+        <div class="player-input-row" data-idx="1"><input type="text" class="player-name-input" value="him"/><button type="button" class="btn-danger-sm js-remove-player">✕</button></div>
+        <div class="player-input-row" data-idx="2"><input type="text" class="player-name-input" value="mehta"/><button type="button" class="btn-danger-sm js-remove-player">✕</button></div>
+        <div class="player-input-row" data-idx="3"><input type="text" class="player-name-input" value="ganja"/><button type="button" class="btn-danger-sm js-remove-player">✕</button></div>
+        <div class="player-input-row" data-idx="4"><input type="text" class="player-name-input" value="rocky"/><button type="button" class="btn-danger-sm js-remove-player">✕</button></div>
+        <div class="player-input-row" data-idx="5"><input type="text" class="player-name-input" value="mota"/><button type="button" class="btn-danger-sm js-remove-player">✕</button></div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:1rem">
+      <div class="form-group">
+        <label>Max teams per player</label>
+        <input id="adminTeamsPerPlayer" type="number"
+               value="{{ data.teams_per_player if data.teams_per_player else '' }}"
+               min="1" max="48" placeholder="Auto (48 ÷ players)"
+               oninput="adminUpdateTeamCapHint()"/>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">Leave blank to auto-calculate (48 ÷ number of players)</div>
+      </div>
+      <div style="display:flex;align-items:center">
+        <div style="padding:0.6rem 0.9rem;background:var(--blue-bg);border:0.5px solid var(--blue-bdr);border-radius:var(--radius);font-size:13px;color:var(--blue-txt);width:100%">
+          ⚽ <strong id="playerCountDisplay">{{ data.players|length or 4 }}</strong> players →
+          <strong id="teamsPerPlayerDisplay">{{ teams_per_player }}</strong> teams each
+          <span id="teamsCapSource" style="font-size:11px;opacity:0.8">
+            {% if data.teams_per_player %}(custom){% else %}(auto){% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    <button type="submit" class="btn-modern btn-primary-modern" id="adminSaveSetupBtn" style="width:100%;margin-top:1rem">Save Setup</button>
+    <div id="adminSetupMsg"></div>
+    </form>
+  </div>
+</section>
+
+<!-- ═══ TIERS ═══ -->
+<section id="tab-tiers" class="tab-section">
+  <div class="card">
+    <h2>Tier Editor</h2>
+    <p class="muted" style="margin-bottom:1rem">Drag teams between tiers. Each tier has one flat base bid price. All 48 teams must be assigned.</p>
+    <div class="grid2" style="margin-bottom:1.5rem">
+      {% for t in [1,2,3,4,5,6] %}
+      <div class="form-group">
+        <label>Tier {{ t }} base price (rupees)</label>
+        <input id="adminTierPrice{{ t }}" type="number"
+               value="{{ data.tier_prices.get(t|string, [200,150,100,70,40,20][t-1]) }}"
+               min="10" step="10" oninput="adminUpdatePriceChips()"/>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Unassigned pool -->
+    <div id="adminUnassignedArea"></div>
+
+    <!-- 6 Tier zones -->
+    <div id="adminTierZones">
+      {% set tier_labels = ["Elite","Strong","Mid","Underdogs","Outsiders","Wildcards"] %}
+      {% for t in [1,2,3,4,5,6] %}
+      <div class="tier-zone" data-tier="{{ t }}">
+        <div class="tier-zone-header">
+          <span class="tier-zone-title">Tier {{ t }} — {{ tier_labels[t-1] }}</span>
+          <span class="tier-count-badge" id="adminTierCount{{ t }}">{{ data.tiers.get(t|string, [])|length }}/8</span>
+          <span class="tier-price-chip tier{{ t }}" id="adminTierPriceChip{{ t }}">{{ data.tier_prices.get(t|string, [200,150,100,70,40,20][t-1]) }} rupees</span>
+        </div>
+        <div class="drop-zone tier{{ t }}-zone" id="adminDropZone{{ t }}"
+             ondragover="adminDragOver(event)" ondragleave="adminDragLeave(event)" ondrop="adminDropTeam(event,{{ t }})">
+          {% for tname in data.tiers.get(t|string, []) %}
+          {% set tm = teams|selectattr('name','equalto',tname)|first %}
+          {% if tm %}
+          <span class="team-chip tier{{ t }}-chip" draggable="true" data-team="{{ tname }}"
+                ondragstart="adminStartDrag(event)" ondragend="adminEndDrag(event)">
+            <span class="chip-flag">{{ tm.flag }}</span> {{ tname }}
+          </span>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="btn-row" style="margin-top:1rem">
+      <button class="btn-modern btn-primary-modern" onclick="adminSaveTiers()">Save Tiers</button>
+      <button class="btn-modern btn-secondary-modern" onclick="adminResetTiers()">Reset to Defaults</button>
+    </div>
+    <div id="adminTierMsg"></div>
+  </div>
+</section>
+
+<!-- ═══ AUCTION ═══ -->
+<section id="tab-auction" class="tab-section">
+  {% if not data.started %}
+  <div class="card center-card">
+    <p class="muted">Complete Setup and Tier Editor first to start the auction.</p>
+  </div>
+  {% else %}
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" id="adminAucTeamsLeft">{{ data.auction_queue|length - data.auction_idx }}</div><div class="stat-lbl">Teams Left</div></div>
+    <div class="stat-card"><div class="stat-val" id="adminAucCurrentBidder">{% if data.players %}{{ data.players[data.current_bidder % data.players|length].name }}{% endif %}</div><div class="stat-lbl">Current Bidder</div></div>
+    <div class="stat-card"><div class="stat-val" id="adminAucRound">{{ (data.auction_idx // (data.players|length) + 1) if data.players else 1 }}</div><div class="stat-lbl">Round</div></div>
+  </div>
+
+  <div id="adminAuctionLive">
+    {% if not data.auction_done and data.auction_idx < data.auction_queue|length %}
+    {% set cur_team_name = data.auction_queue[data.auction_idx] %}
+    {% set cur_team = teams|selectattr('name','equalto',cur_team_name)|first %}
+    {% set cur_tier = namespace(val=0) %}
+    {% set current_bidder_name = data.current_high_bidder or '' %}
+    {% set current_turn_name = data.players[data.current_bidder % data.players|length].name if data.players else '' %}
+    {% for t,tl in data.tiers.items() %}{% if cur_team_name in tl %}{% set cur_tier.val = t|int %}{% endif %}{% endfor %}
+    <div class="auction-banner auction-banner-modern">
+      <div class="auction-banner-top">
+        <div class="auction-flag">{{ cur_team.flag if cur_team else '' }}</div>
+        <div class="auction-hero-copy">
+          <div class="auction-kicker">Now on the block</div>
+          <div class="auction-team-name">{{ cur_team_name }}</div>
+          <div class="auction-subline">Group-order auction A-L, no default bid, Tier {{ cur_tier.val }} reference {{ data.tier_prices.get(cur_tier.val|string, 50) }} rupees</div>
+        </div>
+        <div class="auction-status-pill">{{ data.auction_queue|length - data.auction_idx }} teams left</div>
+      </div>
+      <div class="auction-metrics">
+        <div class="auction-metric">
+          <div class="auction-metric-label">Current bid</div>
+          <div class="auction-metric-value" id="adminLiveBidAmt">{{ data.current_bid if data.current_bid else 'No bids yet' }}</div>
+        </div>
+        <div class="auction-metric">
+          <div class="auction-metric-label">Leading bidder</div>
+          <div class="auction-metric-value" id="adminLiveBidder">{{ current_bidder_name or '—' }}</div>
+        </div>
+        <div class="auction-metric">
+          <div class="auction-metric-label">Current turn</div>
+          <div class="auction-metric-value" id="adminLiveTurn">{{ current_turn_name or '—' }}</div>
+        </div>
+        <div class="auction-metric">
+          <div class="auction-metric-label">Team cap</div>
+          <div class="auction-metric-value">{{ teams_per_player }}</div>
+        </div>
+      </div>
+      <div class="auction-bid-info">
+        Next legal bid: <strong id="adminLiveNextBid">{{ (data.current_bid + 10) if data.current_bid else 1 }}</strong> rupees
+        &nbsp;·&nbsp; Bid step: <strong>10</strong>
+      </div>
+      <div class="form-group" style="margin:0 0 0.75rem 0">
+        <label style="margin-bottom:0.3rem">Bid as</label>
+        <select id="adminBidderSelect">
+          {% for p in data.players %}
+          <option value="{{ p.name }}" {% if p.name == current_bidder_name %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="auction-controls">
+        <input type="number" id="adminBidAmount"
+               value="{{ (data.current_bid + 10) if data.current_bid else 1 }}"
+               min="{{ (data.current_bid + 10) if data.current_bid else 1 }}" step="10"/>
+        <button class="btn-modern btn-primary-modern" onclick="adminPlaceBid()">Place Bid</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminQuickBid(10)">+10</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminQuickBid(25)">+25</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminQuickBid(50)">+50</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminPassOnTeam()">Skip lot</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminAutoAssign()">Auto-assign All</button>
+      </div>
+      <div class="auction-hint">Tip: press Enter in the bid box to submit the current amount.</div>
+      <div id="adminBidMsg"></div>
+    </div>
+    {% else %}
+    <div class="success-banner">🏆 Auction Complete! All teams have been assigned.</div>
+    {% endif %}
+  </div>
+
+  <div class="grid2" style="margin-top:1rem">
+    <div class="card">
+      <h3>Teams</h3>
+      <div id="adminTeamGrid">
+        {% for t in [1,2,3,4,5,6] %}
+        <div class="sep-label">Tier {{ t }} — {{ data.tier_prices.get(t|string,50) }} rupees base</div>
+        <div class="chip-group">
+          {% for tname in data.tiers.get(t|string,[]) %}
+          {% set tm = teams|selectattr('name','equalto',tname)|first %}
+          {% set owner = data.team_sold.get(tname) %}
+          <span class="team-chip {{ 'sold-chip' if owner else 'tier'+t|string+'-chip' }}">
+            {{ tm.flag if tm else '' }} {{ tname }}{% if owner %} ✓{% endif %}
+          </span>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="card">
+      <h3>Auction Log</h3>
+      <div id="adminAucLog" class="log-box">
+        <div class="log-empty">Bids will appear here…</div>
+      </div>
+      <h3 style="margin-top:1.5rem">Player Budgets</h3>
+      <div id="adminBudgetList">
+        {% for p in data.players %}
+        {% set idx = loop.index0 %}
+        <div class="player-row" id="adminBudget-{{ p.name|replace(' ','_') }}">
+          <div class="avatar av{{ idx % 6 }}">{{ p.name[0] }}</div>
+          <div class="player-info">
+            <div class="player-name">{{ p.name }}{% if idx == data.current_bidder and not data.auction_done %} <span class="bidding-badge">Bidding</span>{% endif %}</div>
+            <div class="player-teams muted">{{ data.ownership.get(p.name, [])|join(', ') or 'No teams yet' }}</div>
+          </div>
+          <div class="player-budget" id="adminBudgetVal-{{ p.name|replace(' ','_') }}">{{ data.budgets.get(p.name, data.budget) }} rupees</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<!-- ═══ MATCHES ═══ -->
+<section id="tab-matches" class="tab-section active">
+  <div class="card">
+    <h2>Record Match Result</h2>
+    <div class="form-group" style="margin-bottom:1rem">
+      <label>Prefill from public group fixture</label>
+      <select id="adminMatchFixture" onchange="adminApplyFixtureSelection()">
+        <option value="">Manual entry</option>
+        {% for f in public_group_fixtures %}
+        {% set has_score = f.score_home is not none and f.score_away is not none %}
+        <option value="{{ f.id }}">
+          {{ f.display_dt }} · {{ f.home }} vs {{ f.away }}{% if has_score %} · {{ f.score_home }}–{{ f.score_away }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <div class="muted small" id="adminMatchFixtureInfo">
+        Choose a published group-stage fixture to auto-fill the teams, stage, and any public score that already exists.
+      </div>
+      {% if public_fixtures_error %}
+      <div class="muted small" style="margin-top:4px;color:#a16207">
+        Public fixture source note: {{ public_fixtures_error }}
+      </div>
+      {% endif %}
+    </div>
+    <div class="grid2" style="margin-bottom:1rem">
+      <div class="form-group">
+        <label>Team 1</label>
+        <select id="adminMatchTeam1" onchange="adminClearFixtureSelection()">
+          <option value="">Select team…</option>
+          {% for t in teams %}<option value="{{ t.name }}">{{ t.flag }} {{ t.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Team 2</label>
+        <select id="adminMatchTeam2" onchange="adminClearFixtureSelection()">
+          <option value="">Select team…</option>
+          {% for t in teams %}<option value="{{ t.name }}">{{ t.flag }} {{ t.name }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom: 1rem;">
+      <button type="button" class="btn-modern btn-secondary-modern" onclick="adminFetchScoreFromAPI()" style="width: 100%;">📡 Fetch Score (Single)</button>
+      <button type="button" class="btn-modern btn-primary-modern" onclick="adminSyncAllMatches()" style="width: 100%; background: #0c447c;">🔄 Sync All Finished</button>
+    </div>
+    <div class="grid2" style="margin-bottom:1rem">
+      <div class="form-group">
+        <label>Score</label>
+        <div class="score-row">
+          <input type="number" id="adminScore1" value="2" min="0" max="20"/>
+          <span class="score-dash">–</span>
+          <input type="number" id="adminScore2" value="1" min="0" max="20"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Stage</label>
+        <select id="adminMatchStage" onchange="adminClearFixtureSelection()">
+          <option value="group">Group Stage</option>
+          <option value="r32">Round of 32</option>
+          <option value="r16">Round of 16</option>
+          <option value="qf">Quarter-final</option>
+          <option value="sf">Semi-final</option>
+          <option value="final">Final</option>
+        </select>
+      </div>
+    </div>
+    <!-- ── Extra Events Panel ── -->
+    <div style="background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:0.75rem">Extra Events</div>
+
+      <!-- Penalties row (only relevant if draw in knockout) -->
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem">
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:13px;font-weight:500">
+          <input type="checkbox" id="extraPenalties" style="width:16px;height:16px;cursor:pointer"/>
+          🎯 Won on penalties
+        </label>
+        <span style="font-size:11px;color:var(--muted)">(knockout draws only)</span>
+      </div>
+
+      <!-- Red cards — shown dynamically once teams are selected -->
+      <div id="extraRedCardsSection" style="display:none;margin-bottom:0.75rem">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:0.4rem">🟥 Red cards</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:13px">
+            <span id="extraRCTeam1Label" style="font-weight:600;flex:1">Team 1</span>
+            <input type="number" id="extraRCTeam1" value="0" min="0" max="3" style="width:52px;text-align:center;padding:4px"/>
+          </label>
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:13px">
+            <span id="extraRCTeam2Label" style="font-weight:600;flex:1">Team 2</span>
+            <input type="number" id="extraRCTeam2" value="0" min="0" max="3" style="width:52px;text-align:center;padding:4px"/>
+          </label>
+        </div>
+      </div>
+
+      <!-- Hat-tricks — shown dynamically once teams are selected -->
+      <div id="extraHatTrickSection" style="display:none">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:0.4rem">🎩 Hat-trick scored by</div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:13px;padding:4px 10px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface)">
+            <input type="checkbox" id="extraHTTeam1" style="cursor:pointer"/>
+            <span id="extraHTTeam1Label">Team 1</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:13px;padding:4px 10px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--surface)">
+            <input type="checkbox" id="extraHTTeam2" style="cursor:pointer"/>
+            <span id="extraHTTeam2Label">Team 2</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-modern btn-primary-modern" onclick="adminSubmitMatch()">Submit Match</button>
+    </div>
+    <div id="adminMatchMsg"></div>
+  </div>
+
+  <div class="card" style="margin-top:1rem">
+    <h2>Match History</h2>
+    <div id="adminMatchHistory">
+      {% if data.matches %}
+        {% for m in data.matches %}
+        <div class="match-card" id="adminMatch-{{ m.id }}">
+          <div class="match-card-header">
+            <span class="muted small">{{ m.timestamp }}{% if m.fixture_date %} · {{ m.fixture_date }}{% endif %}</span>
+            <span class="stage-badge">{{ m.stage|upper }}</span>
+            {% if m.fixture_id %}
+            <span class="stage-badge" style="background:var(--blue-bg);color:var(--blue-txt);border-color:var(--blue-bdr)">Public fixture</span>
+            {% endif %}
+            <button class="btn-danger-sm" onclick="adminDeleteMatch('{{ m.id }}')">Delete</button>
+          </div>
+          <div class="match-scoreline">
+            <div class="match-team-left">
+              <span class="match-flag">{{ m.flag1 }}</span>
+              <span class="match-name">{{ m.team1 }}</span>
+              <span class="owner-tag muted">{{ m.owner1 or 'unowned' }}</span>
+            </div>
+            <div class="match-score-box">{{ m.score1 }} – {{ m.score2 }}</div>
+            <div class="match-team-right">
+              <span class="match-flag">{{ m.flag2 }}</span>
+              <span class="match-name">{{ m.team2 }}</span>
+              <span class="owner-tag muted">{{ m.owner2 or 'unowned' }}</span>
+            </div>
+          </div>
+          <div class="match-pts-row">
+            <span class="pts-tag">+{{ m.result.team1.rupees }} pts → {{ m.owner1 or '—' }}</span>
+            <a href="/match/{{ m.id }}" class="detail-link">View analysis →</a>
+            <span class="pts-tag">+{{ m.result.team2.points }} pts → {{ m.owner2 or '—' }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <p class="muted">No matches recorded yet.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FIXTURES ═══ -->
+<section id="tab-fixtures" class="tab-section">
+  <div class="card">
+    <h2>Fixture Editor</h2>
+    <p class="muted" style="margin-bottom:1rem">
+      All 72 group stage fixtures are pre-loaded from the official WC2026 schedule.
+      Use this editor to correct dates, swap home/away, or fix any data errors.
+      Changes only affect the static fixture list used for display and simulation — they do not alter recorded match results.
+    </p>
+
+    <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center">
+      <select id="fixtureGroupFilter" onchange="adminFilterFixtures()" style="width:auto;flex:0 0 auto">
+        <option value="">All Groups</option>
+        {% for letter in ['A','B','C','D','E','F','G','H','I','J','K','L'] %}
+        <option value="Group {{ letter }}">Group {{ letter }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn-sm" onclick="adminSaveFixtureOverrides()">💾 Save Changes</button>
+      <button class="btn-modern btn-secondary-modern" onclick="adminResetFixtureOverrides()" style="font-size:12px;padding:4px 10px">↺ Reset to Defaults</button>
+      <span id="fixtureOverrideCount" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div id="adminFixtureMsg"></div>
+
+    <div style="overflow-x:auto">
+      <table id="fixtureTable" style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--bg)">
+            <th style="padding:8px 6px;text-align:left;border-bottom:1px solid var(--border-med);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">#</th>
+            <th style="padding:8px 6px;text-align:left;border-bottom:1px solid var(--border-med);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Group</th>
+            <th style="padding:8px 6px;text-align:left;border-bottom:1px solid var(--border-med);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Home</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:1px solid var(--border-med);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">vs</th>
+            <th style="padding:8px 6px;text-align:left;border-bottom:1px solid var(--border-med);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Away</th>
+            <th style="padding:8px 6px;text-align:left;border-bottom:1px solid var(--border-med);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Date</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:1px solid var(--border-med);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">MD</th>
+            <th style="padding:8px 6px;text-align:center;border-bottom:1px solid var(--border-med);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">↕</th>
+          </tr>
+        </thead>
+        <tbody id="fixtureTableBody">
+          <!-- Rendered by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ POINTS ═══ -->
+<section id="tab-points" class="tab-section">
+  <div class="card">
+    <h2>Points System Editor</h2>
+    <p class="muted" style="margin-bottom:1rem">Customise point values for each event. Changes apply to future matches.</p>
+
+    <h3 style="margin-bottom:0.75rem">Win Points by Stage</h3>
+    <div class="grid2" style="margin-bottom:1.5rem">
+      {% set win_cfg = data.points_config.win if data.points_config else points_defaults.win %}
+      <div class="form-group">
+        <label>Group Stage win</label>
+        <input id="pts_win_group" type="number" value="{{ win_cfg.get('group', points_defaults.win.group) }}" min="1"/>
+        <div class="field-error" id="err_win_group"></div>
+      </div>
+      <div class="form-group">
+        <label>Round of 32 win</label>
+        <input id="pts_win_r32" type="number" value="{{ win_cfg.get('r32', points_defaults.win.r32) }}" min="1"/>
+        <div class="field-error" id="err_win_r32"></div>
+      </div>
+      <div class="form-group">
+        <label>Round of 16 win</label>
+        <input id="pts_win_r16" type="number" value="{{ win_cfg.get('r16', points_defaults.win.r16) }}" min="1"/>
+        <div class="field-error" id="err_win_r16"></div>
+      </div>
+      <div class="form-group">
+        <label>Quarter-final win</label>
+        <input id="pts_win_qf" type="number" value="{{ win_cfg.get('qf', points_defaults.win.qf) }}" min="1"/>
+        <div class="field-error" id="err_win_qf"></div>
+      </div>
+      <div class="form-group">
+        <label>Semi-final win</label>
+        <input id="pts_win_sf" type="number" value="{{ win_cfg.get('sf', points_defaults.win.sf) }}" min="1"/>
+        <div class="field-error" id="err_win_sf"></div>
+      </div>
+      <div class="form-group">
+        <label>Final win</label>
+        <input id="pts_win_final" type="number" value="{{ win_cfg.get('final', points_defaults.win.final) }}" min="1"/>
+        <div class="field-error" id="err_win_final"></div>
+      </div>
+    </div>
+
+    <h3 style="margin-bottom:0.75rem">Other Events</h3>
+    <div class="grid2" style="margin-bottom:1.5rem">
+      {% set pc = data.points_config if data.points_config else points_defaults %}
+      <div class="form-group">
+        <label>Draw (group stage)</label>
+        <input id="pts_draw" type="number" value="{{ pc.get('draw', points_defaults.draw) }}" min="0"/>
+        <div class="field-error" id="err_draw"></div>
+      </div>
+      <div class="form-group">
+        <label>Loss</label>
+        <input id="pts_loss" type="number" value="{{ pc.get('loss', points_defaults.loss) }}" max="0"/>
+        <div class="field-error" id="err_loss"></div>
+      </div>
+      <div class="form-group">
+        <label>Goal scored</label>
+        <input id="pts_goal" type="number" value="{{ pc.get('goal', points_defaults.goal) }}" min="0"/>
+        <div class="field-error" id="err_goal"></div>
+      </div>
+      <div class="form-group">
+        <label>Clean sheet</label>
+        <input id="pts_clean_sheet" type="number" value="{{ pc.get('clean_sheet', points_defaults.clean_sheet) }}" min="0"/>
+        <div class="field-error" id="err_clean_sheet"></div>
+      </div>
+      <div class="form-group">
+        <label>Won on penalties bonus</label>
+        <input id="pts_penalties" type="number" value="{{ pc.get('penalties', points_defaults.penalties) }}" min="0"/>
+        <div class="field-error" id="err_penalties"></div>
+      </div>
+      <div class="form-group">
+        <label>Red card deduction</label>
+        <input id="pts_red_card" type="number" value="{{ pc.get('red_card', points_defaults.red_card) }}" max="0"/>
+        <div class="field-error" id="err_red_card"></div>
+      </div>
+      <div class="form-group">
+        <label>Hat-trick bonus</label>
+        <input id="pts_hattrick" type="number" value="{{ pc.get('hattrick', points_defaults.hattrick) }}" min="0"/>
+        <div class="field-error" id="err_hattrick"></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-modern btn-primary-modern" onclick="adminSavePoints()">Save Points Config</button>
+      <button class="btn-modern btn-secondary-modern" onclick="adminResetPoints()">Reset to Defaults</button>
+    </div>
+    <div id="adminPointsMsg"></div>
+  </div>
+</section>
+
+<!-- ═══ DANGER ZONE ═══ -->
+<section id="tab-danger" class="tab-section">
+  <div class="card" style="border:1px solid #e53e3e22;">
+    <h2 style="color:#e53e3e;">⚠️ Danger Zone</h2>
+    <p class="muted" style="margin-bottom:1.5rem">These actions are irreversible. Proceed with caution.</p>
+    <div style="background:#fff5f5;border:1px solid #fed7d7;border-radius:var(--radius);padding:1.25rem;">
+      <h3 style="color:#c53030;margin-bottom:0.5rem">Reset League</h3>
+      <p class="muted" style="margin-bottom:1rem">Deletes all league data including players, tiers, auction results, matches, and rupees. This cannot be undone.</p>
+      <button type="button" class="btn-danger" onclick="adminConfirmReset()">Reset League</button>
+    </div>
+    <div id="adminDangerMsg" style="margin-top:1rem"></div>
+  </div>
+</section>
+
+</div><!-- .container -->
+
+<!-- JS data -->
+<script>
+const ADMIN_ALL_TEAMS = {{ teams | tojson }};
+const ADMIN_INITIAL_DATA = {{ data | tojson }};
+const ADMIN_DEFAULT_TIERS = {{ default_tiers | tojson }};
+const ADMIN_POINTS_DEFAULTS = {{ points_defaults | tojson }};
+const ADMIN_PUBLIC_GROUP_FIXTURES = {{ public_group_fixtures | tojson }};
+let ADMIN_LIVE_AUCTION_DATA = ADMIN_INITIAL_DATA;
+</script>
+
+<script>
+// ─── Tab switching ────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    const section = document.getElementById('tab-' + tab);
+    if (section) section.classList.add('active');
+  });
+});
+
+function adminInitSetupControls() {
+  const addBtn = document.getElementById('adminAddPlayerBtn');
+  if (addBtn) addBtn.addEventListener('click', adminAddPlayer);
+
+  const playerList = document.getElementById('adminPlayerList');
+  if (playerList) {
+    playerList.addEventListener('click', (event) => {
+      const removeBtn = event.target.closest('.js-remove-player');
+      if (!removeBtn) return;
+      adminRemovePlayer(removeBtn);
+    });
+  }
+}
+
+function adminInitPage() {
+  adminInitSetupControls();
+  try {
+    if (document.getElementById('adminAuctionLive') && typeof ADMIN_INITIAL_DATA !== 'undefined') {
+      adminRefreshAuction(ADMIN_INITIAL_DATA);
+    }
+  } catch (err) {
+    console.error('Auction panel failed to initialize', err);
+  }
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', adminInitPage);
+} else {
+  adminInitPage();
+}
+
+// ─── Setup tab ───────────────────────────────────────────────────────────────
+function adminAddPlayer() {
+  const list = document.getElementById('adminPlayerList');
+  const rows = list.querySelectorAll('.player-input-row');
+  if (rows.length >= 10) { showMsg('adminSetupMsg', 'Maximum 10 players allowed.', 'error'); return; }
+  const div = document.createElement('div');
+  div.className = 'player-input-row';
+  div.dataset.idx = rows.length;
+  div.innerHTML = '<input type="text" class="player-name-input" value=""/><button type="button" class="btn-danger-sm js-remove-player">✕</button>';
+  list.appendChild(div);
+  adminUpdateTeamCapHint();
+}
+
+function adminRemovePlayer(btn) {
+  const list = document.getElementById('adminPlayerList');
+  const rows = list.querySelectorAll('.player-input-row');
+  if (rows.length <= 2) { showMsg('adminSetupMsg', 'Minimum 2 players required.', 'error'); return; }
+  btn.closest('.player-input-row').remove();
+  adminUpdateTeamCapHint();
+}
+
+function adminUpdateTeamCapHint() {
+  const list = document.getElementById('adminPlayerList');
+  const count = list ? list.querySelectorAll('.player-input-row').length : 0;
+  const tppInput = document.getElementById('adminTeamsPerPlayer');
+  const tppRaw = tppInput ? tppInput.value.trim() : '';
+  const customTpp = tppRaw !== '' ? parseInt(tppRaw) : 0;
+  const autoTpp = count > 0 ? Math.floor(48 / count) : 0;
+  const effective = (customTpp > 0) ? customTpp : autoTpp;
+  const countEl = document.getElementById('playerCountDisplay');
+  const capEl = document.getElementById('teamsPerPlayerDisplay');
+  const srcEl = document.getElementById('teamsCapSource');
+  if (countEl) countEl.textContent = count;
+  if (capEl) capEl.textContent = effective || '—';
+  if (srcEl) srcEl.textContent = customTpp > 0 ? '(custom)' : '(auto)';
+}
+
+async function adminSaveSetup(evt) {
+  if (evt) evt.preventDefault();
+  const name = document.getElementById('adminLeagueName').value.trim();
+  const budget = parseInt(document.getElementById('adminBudget').value);
+  const players = Array.from(document.querySelectorAll('#adminPlayerList .player-name-input'))
+    .map(i => i.value.trim()).filter(Boolean);
+  if (players.length < 2 || players.length > 10) {
+    showMsg('adminSetupMsg', 'Need between 2 and 10 players.', 'error'); return;
+  }
+  if (Number.isNaN(budget)) {
+    showMsg('adminSetupMsg', 'Budget must be a whole number.', 'error'); return;
+  }
+  if (budget < 200) {
+    showMsg('adminSetupMsg', 'Budget must be at least 200 rupees.', 'error'); return;
+  }
+  const tppInput = document.getElementById('adminTeamsPerPlayer');
+  const tppRaw = tppInput ? tppInput.value.trim() : '';
+  const tpp = tppRaw === '' ? 0 : parseInt(tppRaw);
+  if (tppRaw !== '' && (isNaN(tpp) || tpp < 1 || tpp > 48)) {
+    showMsg('adminSetupMsg', 'Max teams per player must be between 1 and 48, or leave blank for auto.', 'error'); return;
+  }
+  const btn = document.getElementById('adminSaveSetupBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch('/api/setup', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({league_name: name, budget, players, teams_per_player: tpp})
+    });
+    const json = await resp.json();
+    if (json.ok) {
+      const effective = json.teams_per_player;
+      showMsg('adminSetupMsg', `Setup saved! Each player can win up to ${effective} teams.`, 'success');
+      window.setTimeout(() => window.location.reload(), 350);
+    } else {
+      showMsg('adminSetupMsg', json.error || 'Error saving setup.', 'error');
+    }
+  } catch (err) {
+    showMsg('adminSetupMsg', 'Could not save setup. Please check the admin page console or try again.', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ─── Tiers tab ────────────────────────────────────────────────────────────────
+let adminDraggedTeam = null;
+let adminDraggedFrom = null;
+
+function adminStartDrag(e) {
+  adminDraggedTeam = e.target.dataset.team;
+  adminDraggedFrom = e.target.closest('.drop-zone');
+  e.target.style.opacity = '0.4';
+}
+function adminEndDrag(e) { e.target.style.opacity = '1'; }
+function adminDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function adminDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+
+function adminDropTeam(e, tier) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!adminDraggedTeam) return;
+  const dropZone = document.getElementById('adminDropZone' + tier);
+  const existing = dropZone.querySelectorAll('.team-chip');
+  if (existing.length >= 8) { showMsg('adminTierMsg', `Tier ${tier} already has 8 teams.`, 'error'); return; }
+  // Remove from source
+  if (adminDraggedFrom) {
+    const chip = adminDraggedFrom.querySelector(`[data-team="${adminDraggedTeam}"]`);
+    if (chip) chip.remove();
+  } else {
+    const unassigned = document.getElementById('adminUnassignedArea');
+    const chip = unassigned && unassigned.querySelector(`[data-team="${adminDraggedTeam}"]`);
+    if (chip) chip.remove();
+  }
+  // Add to new zone
+  const tm = ADMIN_ALL_TEAMS.find(t => t.name === adminDraggedTeam);
+  const chip = document.createElement('span');
+  chip.className = `team-chip tier${tier}-chip`;
+  chip.draggable = true;
+  chip.dataset.team = adminDraggedTeam;
+  chip.innerHTML = `<span class="chip-flag">${tm ? tm.flag : ''}</span> ${adminDraggedTeam}`;
+  chip.ondragstart = adminStartDrag;
+  chip.ondragend = adminEndDrag;
+  dropZone.appendChild(chip);
+  adminUpdateTierCounts();
+  adminDraggedTeam = null;
+  adminDraggedFrom = null;
+}
+
+function adminUpdateTierCounts() {
+  for (let t = 1; t <= 6; t++) {
+    const zone = document.getElementById('adminDropZone' + t);
+    const count = zone ? zone.querySelectorAll('.team-chip').length : 0;
+    const badge = document.getElementById('adminTierCount' + t);
+    if (badge) badge.textContent = count + '/8';
+  }
+}
+
+function adminUpdatePriceChips() {
+  for (let t = 1; t <= 6; t++) {
+    const input = document.getElementById('adminTierPrice' + t);
+    const chip = document.getElementById('adminTierPriceChip' + t);
+    if (input && chip) chip.textContent = input.value + ' rupees';
+  }
+}
+
+async function adminSaveTiers() {
+  const tiers = {};
+  const tier_prices = {};
+  let unassigned = [];
+  for (let t = 1; t <= 6; t++) {
+    const zone = document.getElementById('adminDropZone' + t);
+    tiers[String(t)] = zone ? Array.from(zone.querySelectorAll('.team-chip')).map(c => c.dataset.team) : [];
+    const priceInput = document.getElementById('adminTierPrice' + t);
+    tier_prices[String(t)] = priceInput ? parseInt(priceInput.value) : 20;
+  }
+  // Check all 48 teams assigned
+  const allAssigned = Object.values(tiers).flat();
+  const missing = ADMIN_ALL_TEAMS.map(t => t.name).filter(n => !allAssigned.includes(n));
+  if (missing.length > 0) {
+    showMsg('adminTierMsg', 'Unassigned teams: ' + missing.join(', '), 'error'); return;
+  }
+  const resp = await fetch('/api/tiers', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({tiers, tier_prices})
+  });
+  const json = await resp.json();
+  if (json.ok) showMsg('adminTierMsg', 'Tiers saved!', 'success');
+  else showMsg('adminTierMsg', json.error || 'Error saving tiers.', 'error');
+}
+
+function adminResetTiers() {
+  for (let t = 1; t <= 6; t++) {
+    const zone = document.getElementById('adminDropZone' + t);
+    if (!zone) continue;
+    zone.innerHTML = '';
+    const defaultTeams = ADMIN_DEFAULT_TIERS[String(t)] || [];
+    defaultTeams.forEach(tname => {
+      const tm = ADMIN_ALL_TEAMS.find(x => x.name === tname);
+      const chip = document.createElement('span');
+      chip.className = `team-chip tier${t}-chip`;
+      chip.draggable = true;
+      chip.dataset.team = tname;
+      chip.innerHTML = `<span class="chip-flag">${tm ? tm.flag : ''}</span> ${tname}`;
+      chip.ondragstart = adminStartDrag;
+      chip.ondragend = adminEndDrag;
+      zone.appendChild(chip);
+    });
+  }
+  adminUpdateTierCounts();
+  showMsg('adminTierMsg', 'Reset to defaults.', 'success');
+}
+
+// ─── Auction tab ──────────────────────────────────────────────────────────────
+function adminAuctionContext(data) {
+  const players = data.players || [];
+  const teamName = (data.auction_queue && data.auction_idx < data.auction_queue.length)
+    ? data.auction_queue[data.auction_idx]
+    : '';
+  const team = ADMIN_ALL_TEAMS.find(t => t.name === teamName);
+  let tier = 0;
+  for (const [t, tl] of Object.entries(data.tiers || {})) {
+    if (Array.isArray(tl) && tl.includes(teamName)) { tier = parseInt(t); break; }
+  }
+  const base = (data.tier_prices || {})[String(tier)] || 50;
+  const currentBid = Number(data.current_bid || 0);
+  const nextBid = currentBid > 0 ? currentBid + 10 : 1;
+  const currentBidder = players.length ? players[data.current_bidder % players.length] : null;
+  const leadingBidder = data.current_high_bidder || '';
+  return { players, teamName, team, tier, base, currentBid, nextBid, currentBidder, leadingBidder };
+}
+
+function adminSetBidAmount(amount) {
+  const input = document.getElementById('adminBidAmount');
+  if (!input) return;
+  input.value = amount;
+  input.min = amount;
+  input.focus();
+}
+
+function adminQuickBid(extra) {
+  const liveBidEl = document.getElementById('adminLiveBidAmt');
+  const parsed = liveBidEl ? parseInt(liveBidEl.textContent || '0', 10) : 0;
+  const liveBid = Number.isFinite(parsed) ? parsed : 0;
+  const amount = Math.max(liveBid + 10, liveBid + extra);
+  adminSetBidAmount(amount);
+  showMsg('adminBidMsg', `Prepared ${amount} point bid.`, 'success');
+}
+
+function bindAuctionInput() {
+  const input = document.getElementById('adminBidAmount');
+  if (!input || input.dataset.bound === '1') return;
+  input.dataset.bound = '1';
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      adminPlaceBid();
+    }
+  });
+}
+
+function adminGetSelectedBidder(data) {
+  const select = document.getElementById('adminBidderSelect');
+  const selected = select ? select.value : '';
+  const source = data || ADMIN_LIVE_AUCTION_DATA || ADMIN_INITIAL_DATA;
+  const players = source.players || [];
+  if (selected) {
+    const match = players.find(p => p.name === selected);
+    if (match) return match.name;
+  }
+  const current = players.length ? players[(source.current_bidder || 0) % players.length] : null;
+  return current ? current.name : '';
+}
+
+function adminPopulateBidderSelect(data) {
+  const select = document.getElementById('adminBidderSelect');
+  if (!select) return;
+  const players = data.players || [];
+  const currentName = adminGetSelectedBidder(data);
+  select.innerHTML = players.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+  if (currentName) select.value = currentName;
+}
+
+async function adminPlaceBid() {
+  const amt = parseInt(document.getElementById('adminBidAmount').value);
+  // Get current team and player info from UI before making the API call
+  const teamNameEl = document.querySelector('.auction-team-name');
+  const currentBidderName = adminGetSelectedBidder(ADMIN_LIVE_AUCTION_DATA);
+  const teamName = teamNameEl ? teamNameEl.textContent : 'Unknown team';
+  const playerName = currentBidderName || 'Unknown player';
+  
+  const resp = await fetch('/api/auction/bid', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({amount: amt, bidder: currentBidderName})
+  });
+  const json = await resp.json();
+  if (json.ok) { 
+    adminLogBid(`💰 ${playerName} bid ${amt} rupees on ${teamName}`); 
+    adminRefreshAuction(json.data); 
+  }
+  else {
+    showMsg('adminBidMsg', json.error || 'Bid failed.', 'error');
+    if (json.data) adminRefreshAuction(json.data);
+  }
+}
+
+async function adminPassOnTeam() {
+  // Get current team and player info from UI before making the API call
+  const teamNameEl = document.querySelector('.auction-team-name');
+  const currentBidderName = adminGetSelectedBidder(ADMIN_LIVE_AUCTION_DATA);
+  const teamName = teamNameEl ? teamNameEl.textContent : 'Unknown team';
+  const playerName = currentBidderName || 'Unknown player';
+  
+  const resp = await fetch('/api/auction/pass', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({bidder: currentBidderName})
+  });
+  const json = await resp.json();
+  if (json.ok) { 
+    adminLogBid(`⏭️ ${playerName} passed on ${teamName}`); 
+    adminRefreshAuction(json.data); 
+  }
+  else {
+    showMsg('adminBidMsg', json.error || 'Pass failed.', 'error');
+    if (json.data) adminRefreshAuction(json.data);
+  }
+}
+
+async function adminAutoAssign() {
+  const resp = await fetch('/api/auction/auto', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}'
+  });
+  const json = await resp.json();
+  if (json.ok) { adminRefreshAuction(json.data); }
+  else showMsg('adminBidMsg', json.error || 'Auto-assign failed.', 'error');
+}
+
+function adminRefreshAuction(data) {
+  if (!data) { location.hash = 'auction'; location.reload(); return; }
+  
+  const ctx = adminAuctionContext(data);
+  const players = ctx.players;
+  if (data.auction_done || data.auction_idx >= (data.auction_queue||[]).length) {
+    document.getElementById('adminAuctionLive').innerHTML =
+      '<div class="success-banner">🏆 Auction Complete! All teams have been assigned.</div>';
+    if (document.getElementById('adminAucCurrentBidder')) 
+      document.getElementById('adminAucCurrentBidder').textContent = 'Done';
+    adminUpdateBudgetList(data);
+    return;
+  }
+
+  // Update stats
+  const teamsLeft = 48 - Object.keys(data.team_sold || {}).length;
+  if (document.getElementById('adminAucTeamsLeft')) 
+    document.getElementById('adminAucTeamsLeft').textContent = teamsLeft;
+  if (document.getElementById('adminAucRound')) 
+    document.getElementById('adminAucRound').textContent = Math.floor(Object.keys(data.team_sold||{}).length / Math.max(players.length,1)) + 1;
+
+  const curBidder = players[data.current_bidder % players.length];
+  if (document.getElementById('adminAucCurrentBidder')) 
+    document.getElementById('adminAucCurrentBidder').textContent = curBidder ? curBidder.name : '—';
+
+  const teamName = data.auction_queue[data.auction_idx];
+  const team = ADMIN_ALL_TEAMS.find(t => t.name === teamName);
+  let tier = 0;
+  for (const [t, tl] of Object.entries(data.tiers || {})) {
+    if (Array.isArray(tl) && tl.includes(teamName)) { tier = parseInt(t); break; }
+  }
+  const base = (data.tier_prices || {})[String(tier)] || 50;
+  const curBid = Number(data.current_bid || 0);
+  const nextBid = curBid > 0 ? curBid + 10 : 1;
+  const highBidder = data.current_high_bidder || '';
+  {
+  const legacyCurrentBidLabel = curBid > 0 ? curBid : 'No bids yet';
+  const currentBidderLabel = highBidder || '—';
+  const currentTurnLabel = curBidder ? curBidder.name : '—';
+  }
+  const currentBidLabel = curBid > 0 ? curBid : 'No bids yet';
+  const currentBidderLabel = highBidder || '—';
+  const currentTurnLabel = curBidder ? curBidder.name : '—';
+
+  document.getElementById('adminAuctionLive').innerHTML = `
+    <div class="auction-banner">
+      <div class="auction-flag">${team ? team.flag : ''}</div>
+      <div class="auction-team-name">${teamName}</div>
+      <span class="tier-badge tier${tier}-badge">Tier ${tier} — no default bid</span>
+      <div class="auction-bid-info">
+        Current bid: <strong id="adminLiveBidAmt">${currentBidLabel}</strong>
+        &nbsp;·&nbsp; Bidder: <strong id="adminLiveBidder">${currentBidderLabel}</strong>
+      </div>
+      <div class="auction-controls">
+        <input type="number" id="adminBidAmount" value="${nextBid}" min="${nextBid}" step="10"/>
+        <button class="btn-modern btn-primary-modern" onclick="adminPlaceBid()">Place Bid ↗</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminPassOnTeam()">Skip lot</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminAutoAssign()">Auto-assign All</button>
+      </div>
+      <div id="adminBidMsg"></div>
+    </div>`;
+
+  adminUpdateTeamGrid(data);
+  adminUpdateBudgetList(data);
+  adminAddAuctionLog(data, teamName);
+}
+
+function adminRefreshAuction(data) {
+  if (!data) { location.hash = 'auction'; location.reload(); return; }
+  ADMIN_LIVE_AUCTION_DATA = data;
+
+  const ctx = adminAuctionContext(data);
+  const players = ctx.players;
+  const auctionLive = document.getElementById('adminAuctionLive');
+  if (!auctionLive) return;
+
+  if (data.auction_done || data.auction_idx >= (data.auction_queue || []).length) {
+    auctionLive.innerHTML = '<div class="success-banner">🏆 Auction Complete! All teams have been assigned.</div>';
+    const bidderEl = document.getElementById('adminAucCurrentBidder');
+    if (bidderEl) bidderEl.textContent = 'Done';
+    adminUpdateBudgetList(data);
+    return;
+  }
+
+  const teamsLeft = 48 - Object.keys(data.team_sold || {}).length;
+  const teamsLeftEl = document.getElementById('adminAucTeamsLeft');
+  if (teamsLeftEl) teamsLeftEl.textContent = teamsLeft;
+  const roundEl = document.getElementById('adminAucRound');
+  if (roundEl) roundEl.textContent = Math.floor(Object.keys(data.team_sold || {}).length / Math.max(players.length, 1)) + 1;
+  const bidderEl = document.getElementById('adminAucCurrentBidder');
+  if (bidderEl) bidderEl.textContent = ctx.currentBidder ? ctx.currentBidder.name : '—';
+
+  auctionLive.innerHTML = `
+    <div class="auction-banner auction-banner-modern">
+      <div class="auction-banner-top">
+        <div class="auction-flag">${ctx.team ? ctx.team.flag : ''}</div>
+        <div class="auction-hero-copy">
+          <div class="auction-kicker">Now on the block</div>
+          <div class="auction-team-name">${ctx.teamName}</div>
+          <div class="auction-subline">Group-order auction A-L, no default bid, Tier ${ctx.tier} reference ${ctx.base} rupees</div>
+        </div>
+        <div class="auction-status-pill">${Math.max(0, (data.auction_queue || []).length - data.auction_idx)} teams left</div>
+      </div>
+      <div class="auction-metrics">
+        <div class="auction-metric">
+          <div class="auction-metric-label">Current bid</div>
+          <div class="auction-metric-value" id="adminLiveBidAmt">${currentBidLabel}</div>
+        </div>
+        <div class="auction-metric">
+          <div class="auction-metric-label">Leading bidder</div>
+          <div class="auction-metric-value" id="adminLiveBidder">${currentBidderLabel}</div>
+        </div>
+        <div class="auction-metric">
+          <div class="auction-metric-label">Current turn</div>
+          <div class="auction-metric-value" id="adminLiveTurn">${currentTurnLabel}</div>
+        </div>
+        <div class="auction-metric">
+          <div class="auction-metric-label">Team cap</div>
+          <div class="auction-metric-value">${ADMIN_INITIAL_DATA.teams_per_player || 'auto'}</div>
+        </div>
+      </div>
+      <div class="auction-bid-info">
+        Next legal bid: <strong id="adminLiveNextBid">${ctx.nextBid}</strong> rupees
+        &nbsp;·&nbsp; Bid step: <strong>10</strong>
+      </div>
+      <div class="form-group" style="margin:0 0 0.75rem 0">
+        <label style="margin-bottom:0.3rem">Bid as</label>
+        <select id="adminBidderSelect"></select>
+      </div>
+      <div class="auction-controls">
+        <input type="number" id="adminBidAmount" value="${ctx.nextBid}" min="${ctx.nextBid}" step="10"/>
+        <button class="btn-modern btn-primary-modern" onclick="adminPlaceBid()">Place Bid</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminQuickBid(10)">+10</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminQuickBid(25)">+25</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminQuickBid(50)">+50</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminPassOnTeam()">Skip lot</button>
+        <button class="btn-modern btn-secondary-modern" onclick="adminAutoAssign()">Auto-assign All</button>
+      </div>
+      <div class="auction-hint">Tip: press Enter in the bid box to submit the current amount.</div>
+      <div id="adminBidMsg"></div>
+    </div>`;
+
+  adminUpdateTeamGrid(data);
+  adminUpdateBudgetList(data);
+  adminAddAuctionLog(data, ctx.teamName);
+  adminPopulateBidderSelect(data);
+  bindAuctionInput();
+}
+
+function adminUpdateTeamGrid(data) {
+  const grid = document.getElementById('adminTeamGrid');
+  if (!grid) return;
+  let html = '';
+  for (let t = 1; t <= 6; t++) {
+    const price = (data.tier_prices || {})[String(t)] || 50;
+    html += `<div class="sep-label">Tier ${t} — ${price} rupees base</div><div class="chip-group">`;
+    const teams = (data.tiers || {})[String(t)] || [];
+    teams.forEach(name => {
+      const tm = ADMIN_ALL_TEAMS.find(x => x.name === name);
+      const owner = (data.team_sold || {})[name];
+      html += `<span class="team-chip ${owner ? 'sold-chip' : 'tier'+t+'-chip'}">
+        ${tm ? tm.flag : ''} ${name}${owner ? ' ✓' : ''}
+      </span>`;
+    });
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function adminUpdateBudgetList(data) {
+  const list = document.getElementById('adminBudgetList');
+  if (!list) return;
+  const players = data.players || [];
+  list.innerHTML = players.map((p, i) => {
+    const owned = (data.ownership || {})[p.name] || [];
+    const isCur = i === (data.current_bidder % players.length) && !data.auction_done;
+    return `<div class="player-row">
+      <div class="avatar av${i % 6}">${p.name[0]}</div>
+      <div class="player-info">
+        <div class="player-name">${p.name}${isCur ? ' <span class="bidding-badge">Bidding</span>' : ''}</div>
+        <div class="player-teams muted">${owned.join(', ') || 'No teams yet'}</div>
+      </div>
+      <div class="player-budget">${(data.budgets || {})[p.name] ?? data.budget} rupees</div>
+    </div>`;
+  }).join('');
+}
+
+function adminAddAuctionLog(data, lastTeam) {
+  const log = document.getElementById('adminAucLog');
+  if (!log) return;
+  const winner = (data.team_sold || {})[lastTeam];
+  if (winner) {
+    const tm = ADMIN_ALL_TEAMS.find(t => t.name === lastTeam);
+    if (log.querySelector('.log-empty')) log.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'log-item log-win';
+    // Try to get the winning bid amount if available
+    const tier = getTeamTierFromData(data, lastTeam);
+    const basePrice = (data.tier_prices || {})[String(tier)] || 50;
+    const winningBid = data.current_bid || basePrice;
+    div.textContent = `🏆 ${tm ? tm.flag : ''} ${lastTeam} → ${winner} (${winningBid} rupees)`;
+    log.prepend(div);
+  }
+}
+
+function getTeamTierFromData(data, teamName) {
+  for (const [tier, teams] of Object.entries(data.tiers || {})) {
+    if (Array.isArray(teams) && teams.includes(teamName)) {
+      return parseInt(tier);
+    }
+  }
+  return 0;
+}
+
+function adminLogBid(msg) {
+  const log = document.getElementById('adminAucLog');
+  if (!log) return;
+  const empty = log.querySelector('.log-empty');
+  if (empty) empty.remove();
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.textContent = msg;
+  log.prepend(entry);
+}
+
+function adminGetFixtureById(fixtureId) {
+  return (ADMIN_PUBLIC_GROUP_FIXTURES || []).find(f => String(f.id) === String(fixtureId));
+}
+
+function adminRenderFixtureInfo(fixture) {
+  const info = document.getElementById('adminMatchFixtureInfo');
+  if (!info) return;
+  if (!fixture) {
+    info.textContent = 'Choose a published group-stage fixture to auto-fill the teams, stage, and any public score that already exists.';
+    return;
+  }
+  const hasScore = fixture.score_home !== null && fixture.score_home !== undefined && fixture.score_away !== null && fixture.score_away !== undefined;
+  info.innerHTML = hasScore
+    ? `Loaded from the public schedule: <strong>${fixture.display_dt}</strong> · ${fixture.home} ${fixture.score_home}–${fixture.score_away} ${fixture.away}`
+    : `Loaded from the public schedule: <strong>${fixture.display_dt}</strong> · ${fixture.home} vs ${fixture.away} · no public score yet`;
+}
+
+function adminApplyFixtureSelection() {
+  const fixtureId = document.getElementById('adminMatchFixture')?.value || '';
+  const fixture = fixtureId ? adminGetFixtureById(fixtureId) : null;
+  const team1 = document.getElementById('adminMatchTeam1');
+  const team2 = document.getElementById('adminMatchTeam2');
+  const stage = document.getElementById('adminMatchStage');
+  const score1 = document.getElementById('adminScore1');
+  const score2 = document.getElementById('adminScore2');
+  if (!fixture) {
+    adminRenderFixtureInfo(null);
+    return;
+  }
+  if (team1) team1.value = fixture.home;
+  if (team2) team2.value = fixture.away;
+  if (stage) stage.value = 'group';
+  if (fixture.score_home !== null && fixture.score_home !== undefined && score1) score1.value = fixture.score_home;
+  if (fixture.score_away !== null && fixture.score_away !== undefined && score2) score2.value = fixture.score_away;
+  adminRenderFixtureInfo(fixture);
+}
+
+function adminClearFixtureSelection() {
+  const fixtureSelect = document.getElementById('adminMatchFixture');
+  if (!fixtureSelect || !fixtureSelect.value) return;
+  fixtureSelect.value = '';
+  const score1 = document.getElementById('adminScore1');
+  const score2 = document.getElementById('adminScore2');
+  if (score1) score1.value = 2;
+  if (score2) score2.value = 1;
+  adminRenderFixtureInfo(null);
+}
+
+// ─── Matches tab ──────────────────────────────────────────────────────────────
+
+// Update red-card and hat-trick labels whenever team selects change
+function adminSyncExtraLabels() {
+  const t1 = document.getElementById('adminMatchTeam1').value;
+  const t2 = document.getElementById('adminMatchTeam2').value;
+  const hasTeams = t1 && t2;
+  document.getElementById('extraRedCardsSection').style.display = hasTeams ? '' : 'none';
+  document.getElementById('extraHatTrickSection').style.display = hasTeams ? '' : 'none';
+  if (hasTeams) {
+    document.getElementById('extraRCTeam1Label').textContent = t1;
+    document.getElementById('extraRCTeam2Label').textContent = t2;
+    document.getElementById('extraHTTeam1Label').textContent = t1;
+    document.getElementById('extraHTTeam2Label').textContent = t2;
+  }
+}
+
+// Wire up team dropdowns to sync labels (called after DOM ready)
+document.addEventListener('DOMContentLoaded', () => {
+  const t1sel = document.getElementById('adminMatchTeam1');
+  const t2sel = document.getElementById('adminMatchTeam2');
+  if (t1sel) t1sel.addEventListener('change', () => { adminClearFixtureSelection(); adminSyncExtraLabels(); });
+  if (t2sel) t2sel.addEventListener('change', () => { adminClearFixtureSelection(); adminSyncExtraLabels(); });
+});
+
+async function adminSubmitMatch() {
+  const t1 = document.getElementById('adminMatchTeam1').value;
+  const t2 = document.getElementById('adminMatchTeam2').value;
+  const s1 = parseInt(document.getElementById('adminScore1').value);
+  const s2 = parseInt(document.getElementById('adminScore2').value);
+  const stage = document.getElementById('adminMatchStage').value;
+  const fixtureId = document.getElementById('adminMatchFixture').value;
+
+  if (!t1 || !t2) { showMsg('adminMatchMsg', 'Select both teams.', 'error'); return; }
+  if (t1 === t2)  { showMsg('adminMatchMsg', 'Team 1 and Team 2 cannot be the same.', 'error'); return; }
+
+  // Build structured extra object directly from UI controls — no text parsing
+  const extra = {};
+  if (document.getElementById('extraPenalties').checked) extra.penalties = true;
+  const rc1 = parseInt(document.getElementById('extraRCTeam1').value) || 0;
+  const rc2 = parseInt(document.getElementById('extraRCTeam2').value) || 0;
+  if (rc1 > 0) extra.red_card_t1 = rc1;
+  if (rc2 > 0) extra.red_card_t2 = rc2;
+  if (document.getElementById('extraHTTeam1').checked) extra.hattrick_t1 = true;
+  if (document.getElementById('extraHTTeam2').checked) extra.hattrick_t2 = true;
+
+  const resp = await fetch('/api/match/add', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({team1: t1, team2: t2, score1: s1, score2: s2, stage, extra, fixture_id: fixtureId || null})
+  });
+  const json = await resp.json();
+  if (json.ok) {
+    showMsg('adminMatchMsg', `Match recorded! ${t1} ${s1}–${s2} ${t2}`, 'success');
+    // Reset extra controls
+    document.getElementById('extraPenalties').checked = false;
+    document.getElementById('extraRCTeam1').value = 0;
+    document.getElementById('extraRCTeam2').value = 0;
+    document.getElementById('extraHTTeam1').checked = false;
+    document.getElementById('extraHTTeam2').checked = false;
+    location.reload();
+  } else {
+    showMsg('adminMatchMsg', json.error || 'Error recording match.', 'error');
+  }
+}
+
+async function adminFetchScoreFromAPI() {
+  const t1 = document.getElementById('adminMatchTeam1').value;
+  const t2 = document.getElementById('adminMatchTeam2').value;
+  const msgEl = 'adminMatchMsg';
+  
+  if (!t1 || !t2) {
+    showMsg(msgEl, 'Select both teams first.', 'error');
+    return;
+  }
+  
+  showMsg(msgEl, 'Fetching from API...', 'success');
+  
+  try {
+    const resp = await fetch('/api/match/fetch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ team1: t1, team2: t2 })
+    });
+    const json = await resp.json();
+    
+    if (json.error) {
+      showMsg(msgEl, 'API Error: ' + json.error, 'error');
+    } else if (json.no_result) {
+      showMsg(msgEl, 'No match found for these teams.', 'error');
+    } else {
+      document.getElementById('adminScore1').value = json.score1;
+      document.getElementById('adminScore2').value = json.score2;
+      if (json.stage) document.getElementById('adminMatchStage').value = json.stage;
+      const status = json.status === 'FINISHED' ? '(Finished)' : '(Live)';
+      showMsg(msgEl, `Scores updated from API ${status}!`, 'success');
+    }
+  } catch (err) {
+    showMsg(msgEl, 'Network error: ' + err.message, 'error');
+  }
+}
+
+async function adminSyncAllMatches() {
+  const msgEl = 'adminMatchMsg';
+  showMsg(msgEl, 'Scanning API for finished matches...', 'success');
+  
+  try {
+    const resp = await fetch('/api/match/sync-all', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'}
+    });
+    const json = await resp.json();
+    
+    if (json.error) {
+      showMsg(msgEl, 'Sync Error: ' + json.error, 'error');
+    } else {
+      showMsg(msgEl, json.message, 'success');
+      if (json.count > 0) {
+        setTimeout(() => location.reload(), 1500);
+      }
+    }
+  } catch (err) {
+    showMsg(msgEl, 'Network error: ' + err.message, 'error');
+  }
+}
+
+async function adminDeleteMatch(id) {
+  if (!confirm('Delete this match and reverse its rupees?')) return;
+  const resp = await fetch('/api/match/' + id, {method: 'DELETE'});
+  const json = await resp.json();
+  if (json.ok) {
+    const card = document.getElementById('adminMatch-' + id);
+    if (card) card.remove();
+  } else {
+    alert(json.error || 'Delete failed.');
+  }
+}
+
+// ─── Points tab ───────────────────────────────────────────────────────────────
+function adminClearPointsErrors() {
+  document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+}
+
+function adminValidatePoints(pts) {
+  let valid = true;
+  const stages = ['group','r32','r16','qf','sf','final'];
+  stages.forEach(s => {
+    const v = pts.win[s];
+    if (v === null || v === undefined || v < 1) {
+      document.getElementById('err_win_' + s).textContent = 'Must be ≥ 1';
+      valid = false;
+    }
+  });
+  if (pts.draw < 0) { document.getElementById('err_draw').textContent = 'Must be ≥ 0'; valid = false; }
+  if (pts.loss > 0) { document.getElementById('err_loss').textContent = 'Must be ≤ 0'; valid = false; }
+  if (pts.goal < 0) { document.getElementById('err_goal').textContent = 'Must be ≥ 0'; valid = false; }
+  if (pts.clean_sheet < 0) { document.getElementById('err_clean_sheet').textContent = 'Must be ≥ 0'; valid = false; }
+  if (pts.penalties < 0) { document.getElementById('err_penalties').textContent = 'Must be ≥ 0'; valid = false; }
+  if (pts.red_card > 0) { document.getElementById('err_red_card').textContent = 'Must be ≤ 0'; valid = false; }
+  if (pts.hattrick < 0) { document.getElementById('err_hattrick').textContent = 'Must be ≥ 0'; valid = false; }
+  return valid;
+}
+
+function adminReadPoints() {
+  return {
+    win: {
+      group: parseInt(document.getElementById('pts_win_group').value),
+      r32:   parseInt(document.getElementById('pts_win_r32').value),
+      r16:   parseInt(document.getElementById('pts_win_r16').value),
+      qf:    parseInt(document.getElementById('pts_win_qf').value),
+      sf:    parseInt(document.getElementById('pts_win_sf').value),
+      final: parseInt(document.getElementById('pts_win_final').value),
+    },
+    draw:        parseInt(document.getElementById('pts_draw').value),
+    loss:        parseInt(document.getElementById('pts_loss').value),
+    goal:        parseInt(document.getElementById('pts_goal').value),
+    clean_sheet: parseInt(document.getElementById('pts_clean_sheet').value),
+    penalties:   parseInt(document.getElementById('pts_penalties').value),
+    red_card:    parseInt(document.getElementById('pts_red_card').value),
+    hattrick:    parseInt(document.getElementById('pts_hattrick').value),
+  };
+}
+
+async function adminSavePoints() {
+  adminClearPointsErrors();
+  const pts = adminReadPoints();
+  if (!adminValidatePoints(pts)) return;
+  const resp = await fetch('/api/rupees', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({rupees: pts})
+  });
+  const json = await resp.json();
+  if (json.ok) showMsg('adminPointsMsg', 'Points config saved!', 'success');
+  else showMsg('adminPointsMsg', json.error || 'Error saving rupees.', 'error');
+}
+
+function adminResetPoints() {
+  const d = ADMIN_POINTS_DEFAULTS;
+  document.getElementById('pts_win_group').value = d.win.group;
+  document.getElementById('pts_win_r32').value   = d.win.r32;
+  document.getElementById('pts_win_r16').value   = d.win.r16;
+  document.getElementById('pts_win_qf').value    = d.win.qf;
+  document.getElementById('pts_win_sf').value    = d.win.sf;
+  document.getElementById('pts_win_final').value = d.win.final;
+  document.getElementById('pts_draw').value        = d.draw;
+  document.getElementById('pts_loss').value        = d.loss;
+  document.getElementById('pts_goal').value        = d.goal;
+  document.getElementById('pts_clean_sheet').value = d.clean_sheet;
+  document.getElementById('pts_penalties').value   = d.penalties;
+  document.getElementById('pts_red_card').value    = d.red_card;
+  document.getElementById('pts_hattrick').value    = d.hattrick;
+  adminClearPointsErrors();
+  adminSavePoints();
+}
+
+// ─── Danger Zone ──────────────────────────────────────────────────────────────
+async function adminConfirmReset() {
+  const input = prompt('Type RESET to confirm. This will delete all league data.');
+  if (input !== 'RESET') {
+    if (input !== null) showMsg('adminDangerMsg', 'Reset cancelled — you must type RESET exactly.', 'error');
+    return;
+  }
+  try {
+    const resp = await fetch('/api/reset', {method: 'POST'});
+    const json = await resp.json();
+    if (json.ok) {
+      window.location = '/admin/login';
+    } else {
+      showMsg('adminDangerMsg', json.error || 'Reset failed.', 'error');
+    }
+  } catch (err) {
+    showMsg('adminDangerMsg', 'Could not reset league. Please try again.', 'error');
+  }
+}
+
+// ─── Utility ──────────────────────────────────────────────────────────────────
+function showMsg(id, text, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = type === 'success' ? 'msg-success' : 'msg-error';
+  setTimeout(() => { el.textContent = ''; el.className = ''; }, 5000);
+}
+
+window.adminAddPlayer = adminAddPlayer;
+window.adminRemovePlayer = adminRemovePlayer;
+window.adminUpdateTeamCapHint = adminUpdateTeamCapHint;
+window.adminSaveSetup = adminSaveSetup;
+window.adminConfirmReset = adminConfirmReset;
+</script>
+
+{% endblock %}
