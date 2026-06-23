@@ -461,6 +461,63 @@ def _map_stage(api_stage: str) -> str:
     return mapping.get(api_stage.upper(), "group")
 
 
+def _fetch_fallback_games():
+    try:
+        resp = requests.get("https://worldcup26.ir/get/games", timeout=5)
+        if resp.status_code == 200:
+            return resp.json().get("games", [])
+    except Exception as e:
+        logging.warning("requests failed to fetch from worldcup26.ir, trying curl: %s", e)
+        
+    try:
+        import subprocess
+        res = subprocess.run(["curl", "-s", "https://worldcup26.ir/get/games"], capture_output=True, text=True, timeout=8)
+        if res.returncode == 0 and res.stdout:
+            return json.loads(res.stdout).get("games", [])
+    except Exception as e:
+        logging.error("curl failed to fetch from worldcup26.ir: %s", e)
+        
+    return []
+
+
+def _enrich_hattricks_from_fallback(team1, team2, extra):
+    try:
+        import re
+        games = _fetch_fallback_games()
+        for g in games:
+            h_name = g.get("home_team_name_en")
+            a_name = g.get("away_team_name_en")
+            if h_name and a_name and _match_team_names(h_name, a_name, team1, team2):
+                is_h_team1 = _is_name_match(h_name, team1)
+                
+                h_scorers = g.get("home_scorers")
+                if h_scorers and h_scorers != "null":
+                    entries = re.findall(r'["“]([^"密“”]+)["”]', h_scorers)
+                    if not entries:
+                        entries = re.findall(r'["“]([^"“”]+)["”]', h_scorers)
+                    counts = {}
+                    for entry in entries:
+                        name = re.sub(r'\s+\d+.*?$', '', entry).strip()
+                        counts[name] = counts.get(name, 0) + 1
+                    if any(c >= 3 for c in counts.values()):
+                        if is_h_team1: extra["hattrick_t1"] = True
+                        else: extra["hattrick_t2"] = True
+                        
+                a_scorers = g.get("away_scorers")
+                if a_scorers and a_scorers != "null":
+                    entries = re.findall(r'["“]([^"“”]+)["”]', a_scorers)
+                    counts = {}
+                    for entry in entries:
+                        name = re.sub(r'\s+\d+.*?$', '', entry).strip()
+                        counts[name] = counts.get(name, 0) + 1
+                    if any(c >= 3 for c in counts.values()):
+                        if is_h_team1: extra["hattrick_t2"] = True
+                        else: extra["hattrick_t1"] = True
+                break
+    except Exception as e:
+        logging.error("Error during enrichment: %s", e)
+
+
 def fetch_match_result(team1: str, team2: str) -> dict:
     cache_key = f"{team1}|{team2}"
     now = time.time()
@@ -514,7 +571,9 @@ def fetch_match_result(team1: str, team2: str) -> dict:
                                 # Find team of scorer
                                 scorer_team = next((g["team"]["name"] for g in m["goals"] if (g.get("scorer", {}).get("id") or g.get("scorer", {}).get("name")) == sid), "")
                                 if _is_name_match(scorer_team, team1): extra["hattrick_t1"] = True
-                                else: extra["hattrick_t2"] = True
+                                else: extra["hattrick_t2"] = True                    # Enrich hattricks from fallback API if not already set (e.g. on free tier)
+                    if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
+                        _enrich_hattricks_from_fallback(team1, team2, extra)
 
                     result = {
                         "team1": team1, "team2": team2,
@@ -532,22 +591,49 @@ def fetch_match_result(team1: str, team2: str) -> dict:
 
     # Fallback to worldcup26.ir (Open Source API)
     try:
-        resp = requests.get("https://worldcup26.ir/get/games", timeout=8)
-        if resp.status_code == 200:
-            games = resp.json()
-            for g in games:
-                ht, at = g.get("home_team"), g.get("away_team")
-                if _match_team_names(ht, at, team1, team2):
-                    result = {
-                        "team1": team1, "team2": team2,
-                        "score1": g.get("home_score") if _is_name_match(ht, team1) else g.get("away_score"),
-                        "score2": g.get("away_score") if _is_name_match(ht, team1) else g.get("home_score"),
-                        "stage": _map_stage_simple(g.get("round")),
-                        "status": "FINISHED" if g.get("finished") else "IN_PLAY",
-                        "source": "worldcup26.ir"
-                    }
-                    _fetch_cache[cache_key] = (now, result)
-                    return result
+        games = _fetch_fallback_games()
+        for g in games:
+            ht = g.get("home_team_name_en") or g.get("home_team")
+            at = g.get("away_team_name_en") or g.get("away_team")
+            if ht and at and _match_team_names(ht, at, team1, team2):
+                extra = {}
+                is_h_team1 = _is_name_match(ht, team1)
+                
+                h_scorers = g.get("home_scorers")
+                if h_scorers and h_scorers != "null":
+                    import re
+                    entries = re.findall(r'["“]([^"“”]+)["”]', h_scorers)
+                    counts = {}
+                    for entry in entries:
+                        name = re.sub(r'\s+\d+.*?$', '', entry).strip()
+                        counts[name] = counts.get(name, 0) + 1
+                    if any(c >= 3 for c in counts.values()):
+                        if is_h_team1: extra["hattrick_t1"] = True
+                        else: extra["hattrick_t2"] = True
+
+                a_scorers = g.get("away_scorers")
+                if a_scorers and a_scorers != "null":
+                    import re
+                    entries = re.findall(r'["“]([^"“”]+)["”]', a_scorers)
+                    counts = {}
+                    for entry in entries:
+                        name = re.sub(r'\s+\d+.*?$', '', entry).strip()
+                        counts[name] = counts.get(name, 0) + 1
+                    if any(c >= 3 for c in counts.values()):
+                        if is_h_team1: extra["hattrick_t2"] = True
+                        else: extra["hattrick_t1"] = True
+
+                result = {
+                    "team1": team1, "team2": team2,
+                    "score1": int(g.get("home_score")) if _is_name_match(ht, team1) else int(g.get("away_score")),
+                    "score2": int(g.get("away_score")) if _is_name_match(ht, team1) else int(g.get("home_score")),
+                    "stage": _map_stage_simple(g.get("type") or g.get("round")),
+                    "status": "FINISHED" if str(g.get("finished")).upper() == "TRUE" else "IN_PLAY",
+                    "extra": extra,
+                    "source": "worldcup26.ir"
+                }
+                _fetch_cache[cache_key] = (now, result)
+                return result
     except:
         pass
 
@@ -622,6 +708,10 @@ def api_match_sync_live():
                             scorer_team = next((g["team"]["name"] for g in m.get("goals", []) if (g.get("scorer", {}).get("id") or g.get("scorer", {}).get("name")) == sid), "")
                             if _is_name_match(scorer_team, t1): extra["hattrick_t1"] = True
                             else: extra["hattrick_t2"] = True
+
+                    # Enrich hattricks from fallback API if not already set (e.g. on free tier)
+                    if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
+                        _enrich_hattricks_from_fallback(t1, t2, extra)
 
                     score = m["score"]["fullTime"]
                     res = _auto_record_match(data, t1, t2, score["home"], score["away"], _map_stage(m.get("stage", "")), str(m["id"]), extra)
@@ -1458,6 +1548,10 @@ def api_match_sync_all():
                     scorer_team = next((g["team"]["name"] for g in m.get("goals", []) if (g.get("scorer", {}).get("id") or g.get("scorer", {}).get("name")) == sid), "")
                     if _is_name_match(scorer_team, t1): extra["hattrick_t1"] = True
                     else: extra["hattrick_t2"] = True
+
+            # Enrich hattricks from fallback API if not already set (e.g. on free tier)
+            if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
+                _enrich_hattricks_from_fallback(t1, t2, extra)
 
             score = m["score"]["fullTime"]
             s1, s2 = score["home"], score["away"]
