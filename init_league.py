@@ -11,7 +11,7 @@ auction_results = [
     ("Piyush", "Sweden", 150),
     
     # Deepanshu
-    ("Deepanshu", "Turkey", 300),
+    ("Deepanshu", "Türkiye", 300),
     ("Deepanshu", "Japan", 450),
     ("Deepanshu", "Argentina", 1000),
     ("Deepanshu", "Ivory Coast", 250),
