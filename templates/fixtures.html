@@ -87,8 +87,28 @@
               <span>{{ item.record.score2 }}</span>
             </div>
           {% else %}
-            <div class="bracket-team-line" style="opacity: 0.4;"><span>{{ item.left_label }}</span><span>-</span></div>
-            <div class="bracket-team-line" style="opacity: 0.4;"><span>{{ item.right_label }}</span><span>-</span></div>
+            <div class="bracket-team-line" style="opacity: 0.65; font-style: italic;">
+              <span>
+                {% if item.predicted_team1 %}
+                  {{ team_flag(item.predicted_team1) }} {{ item.predicted_team1 }}
+                  <span style="font-size: 0.55rem; color: var(--text-dim); font-style: normal; font-weight: normal;">({{ item.left_label }})</span>
+                {% else %}
+                  {{ item.left_label }}
+                {% endif %}
+              </span>
+              <span>-</span>
+            </div>
+            <div class="bracket-team-line" style="opacity: 0.65; font-style: italic;">
+              <span>
+                {% if item.predicted_team2 %}
+                  {{ team_flag(item.predicted_team2) }} {{ item.predicted_team2 }}
+                  <span style="font-size: 0.55rem; color: var(--text-dim); font-style: normal; font-weight: normal;">({{ item.right_label }})</span>
+                {% else %}
+                  {{ item.right_label }}
+                {% endif %}
+              </span>
+              <span>-</span>
+            </div>
           {% endif %}
         </div>
         {% endfor %}

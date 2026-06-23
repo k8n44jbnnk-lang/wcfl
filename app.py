@@ -886,71 +886,290 @@ def _knockout_slot_label(slot_type: str, group=None) -> str:
     return "TBD"
 
 
-def build_knockout_sections(data: dict) -> list[dict]:
-    matches = data.get("matches", [])
-    by_num = {m.get("match_num"): m for m in matches if m.get("match_num")}
+def calculate_local_group_standings(data):
+    standings = {}
+    for letter, teams in WC2026_GROUPS.items():
+        standings[letter] = {
+            t: {"team": t, "played": 0, "won": 0, "draw": 0, "lost": 0, "gf": 0, "ga": 0, "gd": 0, "pts": 0}
+            for t in teams
+        }
+    
+    for m in data.get("matches", []):
+        if m.get("stage") == "group":
+            t1, t2 = m["team1"], m["team2"]
+            s1, s2 = int(m["score1"]), int(m["score2"])
+            g1, g2 = get_team_group(t1), get_team_group(t2)
+            
+            if g1 and t1 in standings[g1]:
+                st1 = standings[g1][t1]
+                st1["played"] += 1
+                st1["gf"] += s1
+                st1["ga"] += s2
+                st1["gd"] += (s1 - s2)
+                if s1 > s2:
+                    st1["won"] += 1
+                    st1["pts"] += 3
+                elif s1 == s2:
+                    st1["draw"] += 1
+                    st1["pts"] += 1
+                else:
+                    st1["lost"] += 1
+                    
+            if g2 and t2 in standings[g2]:
+                st2 = standings[g2][t2]
+                st2["played"] += 1
+                st2["gf"] += s2
+                st2["ga"] += s1
+                st2["gd"] += (s2 - s1)
+                if s2 > s1:
+                    st2["won"] += 1
+                    st2["pts"] += 3
+                elif s1 == s2:
+                    st2["draw"] += 1
+                    st2["pts"] += 1
+                else:
+                    st2["lost"] += 1
+                    
+    sorted_groups = {}
+    for letter, teams_dict in standings.items():
+        sorted_teams = sorted(
+            teams_dict.values(),
+            key=lambda x: (-x["pts"], -x["gd"], -x["gf"], x["team"])
+        )
+        for i, t in enumerate(sorted_teams):
+            t["position"] = i + 1
+        sorted_groups[letter] = sorted_teams
+    return sorted_groups
 
+
+def assign_3rds(slots, teams, current_assignment=None):
+    if current_assignment is None:
+        current_assignment = {}
+    if not slots:
+        return current_assignment
+    
+    slot_match, winner_group = slots[0]
+    for i, (team_name, team_group) in enumerate(teams):
+        if team_group != winner_group:
+            remaining_teams = teams[:i] + teams[i+1:]
+            new_assignment = current_assignment.copy()
+            new_assignment[slot_match] = team_name
+            res = assign_3rds(slots[1:], remaining_teams, new_assignment)
+            if res:
+                return res
+    return None
+
+
+def _get_team_group_pts(team_name, sorted_groups):
+    for group, table in sorted_groups.items():
+        for t in table:
+            if t["team"] == team_name:
+                return t["pts"], t["gd"], t["gf"]
+    return 0, 0, 0
+
+
+def resolve_match_outcome(match_num, data, sorted_groups, assigned_3rds, resolved_cache):
+    if match_num in resolved_cache:
+        return resolved_cache[match_num]
+        
+    by_num = {m.get("match_num"): m for m in data.get("matches", []) if m.get("match_num")}
+    record = by_num.get(match_num)
+    
+    if record:
+        team1 = record["team1"]
+        team2 = record["team2"]
+        score1 = record["score1"]
+        score2 = record["score2"]
+        res = record.get("result", {})
+        
+        is_winner1 = False
+        if res:
+            is_winner1 = res.get("team1", {}).get("points", 0) > res.get("team2", {}).get("points", 0) or (score1 > score2)
+            extra = record.get("extra", {})
+            if score1 == score2 and extra.get("winner") == team1:
+                is_winner1 = True
+                
+        winner = team1 if is_winner1 else team2
+        loser = team2 if is_winner1 else team1
+        outcome = {"team1": team1, "team2": team2, "winner": winner, "loser": loser, "played": True}
+        resolved_cache[match_num] = outcome
+        return outcome
+        
+    if match_num <= 88:
+        slot = next((s for s in WC2026_R32_BRACKET if s["match"] == match_num), None)
+        if slot:
+            sa_type, sa_group = slot["slot_a"]
+            if sa_type == "1st":
+                team1 = sorted_groups[sa_group][0]["team"] if sa_group in sorted_groups else "TBD"
+            elif sa_type == "2nd":
+                team1 = sorted_groups[sa_group][1]["team"] if sa_group in sorted_groups else "TBD"
+            else:
+                team1 = "TBD"
+                
+            sb_type, sb_group = slot["slot_b"]
+            if sb_type == "1st":
+                team2 = sorted_groups[sb_group][0]["team"] if sb_group in sorted_groups else "TBD"
+            elif sb_type == "2nd":
+                team2 = sorted_groups[sb_group][1]["team"] if sb_group in sorted_groups else "TBD"
+            elif sb_type == "3rd":
+                team2 = assigned_3rds.get(match_num, "TBD")
+            else:
+                team2 = "TBD"
+        else:
+            team1, team2 = "TBD", "TBD"
+    else:
+        BRACKET_TREE = {
+            89: {"type": "winner", "a": 74, "b": 77},
+            90: {"type": "winner", "a": 75, "b": 76},
+            91: {"type": "winner", "a": 78, "b": 79},
+            92: {"type": "winner", "a": 80, "b": 73},
+            93: {"type": "winner", "a": 81, "b": 82},
+            94: {"type": "winner", "a": 83, "b": 84},
+            95: {"type": "winner", "a": 85, "b": 86},
+            96: {"type": "winner", "a": 87, "b": 88},
+            
+            97: {"type": "winner", "a": 89, "b": 90},
+            98: {"type": "winner", "a": 91, "b": 92},
+            99: {"type": "winner", "a": 93, "b": 94},
+            100: {"type": "winner", "a": 95, "b": 96},
+            
+            101: {"type": "winner", "a": 97, "b": 98},
+            102: {"type": "winner", "a": 99, "b": 100},
+            
+            103: {"type": "loser", "a": 101, "b": 102},
+            104: {"type": "winner", "a": 101, "b": 102}
+        }
+        cfg = BRACKET_TREE.get(match_num)
+        if cfg:
+            res_a = resolve_match_outcome(cfg["a"], data, sorted_groups, assigned_3rds, resolved_cache)
+            res_b = resolve_match_outcome(cfg["b"], data, sorted_groups, assigned_3rds, resolved_cache)
+            if cfg["type"] == "winner":
+                team1, team2 = res_a["winner"], res_b["winner"]
+            else:
+                team1, team2 = res_a["loser"], res_b["loser"]
+        else:
+            team1, team2 = "TBD", "TBD"
+            
+    if team1 == "TBD" and team2 == "TBD":
+        winner, loser = "TBD", "TBD"
+    elif team1 == "TBD":
+        winner, loser = team2, "TBD"
+    elif team2 == "TBD":
+        winner, loser = team1, "TBD"
+    else:
+        pts1, gd1, gf1 = _get_team_group_pts(team1, sorted_groups)
+        pts2, gd2, gf2 = _get_team_group_pts(team2, sorted_groups)
+        if (pts1, gd1, gf1) >= (pts2, gd2, gf2):
+            winner, loser = team1, team2
+        else:
+            winner, loser = team2, team1
+            
+    outcome = {"team1": team1, "team2": team2, "winner": winner, "loser": loser, "played": False}
+    resolved_cache[match_num] = outcome
+    return outcome
+
+
+def build_knockout_sections(data: dict) -> list[dict]:
+    sorted_groups = calculate_local_group_standings(data)
+    
+    thirds = []
+    for l in "ABCDEFGHIJKL":
+        if l in sorted_groups and len(sorted_groups[l]) >= 3:
+            thirds.append(sorted_groups[l][2])
+            
+    sorted_thirds = sorted(thirds, key=lambda x: (-x["pts"], -x["gd"], -x["gf"], x["team"]))
+    q_3rds = [(t["team"], get_team_group(t["team"])) for t in sorted_thirds[:8]]
+    
+    slots_3rd = [
+        (74, "E"), (77, "I"), (79, "A"), (80, "L"),
+        (81, "D"), (82, "G"), (85, "B"), (87, "K")
+    ]
+    assigned_3rds = assign_3rds(slots_3rd, q_3rds)
+    if not assigned_3rds:
+        assigned_3rds = {match_num: q_3rds[i][0] for i, (match_num, _) in enumerate(slots_3rd) if i < len(q_3rds)}
+        
+    resolved_cache = {}
+    for match_num in range(73, 105):
+        resolve_match_outcome(match_num, data, sorted_groups, assigned_3rds, resolved_cache)
+        
+    matches_list = data.get("matches", [])
+    by_num = {m.get("match_num"): m for m in matches_list if m.get("match_num")}
+    
     def resolve_record(match_num: int):
         return by_num.get(match_num)
-
+        
     sections = []
 
     r32_items = []
     for slot in WC2026_R32_BRACKET:
-        rec = resolve_record(slot["match"])
+        m_num = slot["match"]
+        rec = resolve_record(m_num)
+        pred = resolved_cache.get(m_num, {})
         r32_items.append({
-            "match_num": slot["match"],
+            "match_num": m_num,
             "date": slot["date"],
             "left_label": _knockout_slot_label(slot["slot_a"][0], slot["slot_a"][1]),
             "right_label": _knockout_slot_label(slot["slot_b"][0], slot["slot_b"][1]),
             "record": rec,
+            "predicted_team1": pred.get("team1") if pred.get("team1") != "TBD" else None,
+            "predicted_team2": pred.get("team2") if pred.get("team2") != "TBD" else None,
             "badge": "Round of 32",
         })
     sections.append({"title": "Round of 32", "matches": r32_items})
 
     r16_items = []
     for slot in WC2026_R16_BRACKET:
-        rec = resolve_record(slot["match"])
+        m_num = slot["match"]
+        rec = resolve_record(m_num)
+        pred = resolved_cache.get(m_num, {})
         r16_items.append({
-            "match_num": slot["match"],
+            "match_num": m_num,
             "date": slot["date"],
             "left_label": f"Winner of Match {slot['r32_a']}",
             "right_label": f"Winner of Match {slot['r32_b']}",
             "record": rec,
+            "predicted_team1": pred.get("team1") if pred.get("team1") != "TBD" else None,
+            "predicted_team2": pred.get("team2") if pred.get("team2") != "TBD" else None,
             "badge": "Round of 16",
         })
     sections.append({"title": "Round of 16", "matches": r16_items})
 
     qf_refs = [(97, 89, 90), (98, 91, 92), (99, 93, 94), (100, 95, 96)]
     qf_items = []
-    for match_num, a, b in qf_refs:
-        rec = resolve_record(match_num)
+    for m_num, a, b in qf_refs:
+        rec = resolve_record(m_num)
+        pred = resolved_cache.get(m_num, {})
         qf_items.append({
-            "match_num": match_num,
+            "match_num": m_num,
             "date": "",
             "left_label": f"Winner of Match {a}",
             "right_label": f"Winner of Match {b}",
             "record": rec,
+            "predicted_team1": pred.get("team1") if pred.get("team1") != "TBD" else None,
+            "predicted_team2": pred.get("team2") if pred.get("team2") != "TBD" else None,
             "badge": "Quarter-final",
         })
     sections.append({"title": "Quarter-finals", "matches": qf_items})
 
     sf_refs = [(101, 97, 98), (102, 99, 100)]
     sf_items = []
-    for match_num, a, b in sf_refs:
-        rec = resolve_record(match_num)
+    for m_num, a, b in sf_refs:
+        rec = resolve_record(m_num)
+        pred = resolved_cache.get(m_num, {})
         sf_items.append({
-            "match_num": match_num,
+            "match_num": m_num,
             "date": "",
             "left_label": f"Winner of Match {a}",
             "right_label": f"Winner of Match {b}",
             "record": rec,
+            "predicted_team1": pred.get("team1") if pred.get("team1") != "TBD" else None,
+            "predicted_team2": pred.get("team2") if pred.get("team2") != "TBD" else None,
             "badge": "Semi-final",
         })
     sections.append({"title": "Semi-finals", "matches": sf_items})
 
     third_rec = resolve_record(103)
-    final_rec = resolve_record(104)
+    pred_third = resolved_cache.get(103, {})
     sections.append({
         "title": "Third-place playoff",
         "matches": [{
@@ -959,10 +1178,15 @@ def build_knockout_sections(data: dict) -> list[dict]:
             "left_label": "Loser of Match 101",
             "right_label": "Loser of Match 102",
             "record": third_rec,
+            "predicted_team1": pred_third.get("team1") if pred_third.get("team1") != "TBD" else None,
+            "predicted_team2": pred_third.get("team2") if pred_third.get("team2") != "TBD" else None,
             "badge": "No fantasy points",
             "no_points": True,
         }],
     })
+    
+    final_rec = resolve_record(104)
+    pred_final = resolved_cache.get(104, {})
     sections.append({
         "title": "Final",
         "matches": [{
@@ -971,6 +1195,8 @@ def build_knockout_sections(data: dict) -> list[dict]:
             "left_label": "Winner of Match 101",
             "right_label": "Winner of Match 102",
             "record": final_rec,
+            "predicted_team1": pred_final.get("team1") if pred_final.get("team1") != "TBD" else None,
+            "predicted_team2": pred_final.get("team2") if pred_final.get("team2") != "TBD" else None,
             "badge": "Championship",
         }],
     })
