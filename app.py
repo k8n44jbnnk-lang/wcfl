@@ -1010,10 +1010,9 @@ def resolve_match_outcome(match_num, data, sorted_groups, assigned_3rds, resolve
         
         is_winner1 = False
         if res:
-            is_winner1 = res.get("team1", {}).get("points", 0) > res.get("team2", {}).get("points", 0) or (score1 > score2)
-            extra = record.get("extra", {})
-            if score1 == score2 and extra.get("winner") == team1:
-                is_winner1 = True
+            is_winner1 = (score1 > score2) or (score1 == score2 and record.get("extra", {}).get("winner") == team1)
+            if score1 == score2 and not record.get("extra", {}).get("winner"):
+                is_winner1 = res.get("team1", {}).get("points", 0) > res.get("team2", {}).get("points", 0)
                 
         winner = team1 if is_winner1 else team2
         loser = team2 if is_winner1 else team1
@@ -1075,6 +1074,33 @@ def resolve_match_outcome(match_num, data, sorted_groups, assigned_3rds, resolve
                 team1, team2 = res_a["loser"], res_b["loser"]
         else:
             team1, team2 = "TBD", "TBD"
+
+    # Fallback team matching check: if a match exists in database between team1 and team2 in knockout stages
+    if team1 != "TBD" and team2 != "TBD":
+        for m in data.get("matches", []):
+            if m.get("stage") != "group":
+                mt1, mt2 = m.get("team1"), m.get("team2")
+                if (mt1 == team1 and mt2 == team2) or (mt1 == team2 and mt2 == team1):
+                    score1 = m["score1"]
+                    score2 = m["score2"]
+                    res = m.get("result", {})
+                    
+                    rec_winner = None
+                    if score1 > score2:
+                        rec_winner = mt1
+                    elif score2 > score1:
+                        rec_winner = mt2
+                    elif m.get("extra", {}).get("winner"):
+                        rec_winner = m["extra"]["winner"]
+                    else:
+                        rec_winner = mt1 if res.get("team1", {}).get("points", 0) > res.get("team2", {}).get("points", 0) else mt2
+                        
+                    is_winner_team1 = (rec_winner == team1)
+                    winner = team1 if is_winner_team1 else team2
+                    loser = team2 if is_winner_team1 else team1
+                    outcome = {"team1": team1, "team2": team2, "winner": winner, "loser": loser, "played": True}
+                    resolved_cache[match_num] = outcome
+                    return outcome
             
     if team1 == "TBD" and team2 == "TBD":
         winner, loser = "TBD", "TBD"
@@ -1122,7 +1148,19 @@ def build_knockout_sections(data: dict) -> list[dict]:
     by_num = {m.get("match_num"): m for m in matches_list if m.get("match_num")}
     
     def resolve_record(match_num: int):
-        return by_num.get(match_num)
+        rec = by_num.get(match_num)
+        if rec:
+            return rec
+        pred = resolved_cache.get(match_num)
+        if not pred or pred.get("team1") == "TBD" or pred.get("team2") == "TBD":
+            return None
+        t1, t2 = pred["team1"], pred["team2"]
+        for m in matches_list:
+            if m.get("stage") != "group":
+                mt1, mt2 = m.get("team1"), m.get("team2")
+                if (mt1 == t1 and mt2 == t2) or (mt1 == t2 and mt2 == t1):
+                    return m
+        return None
         
     sections = []
 

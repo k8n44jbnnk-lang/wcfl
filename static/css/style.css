@@ -252,9 +252,95 @@ p { font-size: var(--font-body); color: var(--text-muted); }
 .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
 @media (max-width: 600px) { .group-grid { grid-template-columns: 1fr; } }
 
-.bracket-wrapper { overflow-x: auto; padding: 1rem 0; -webkit-overflow-scrolling: touch; }
-.bracket-container { display: flex; gap: 1.5rem; min-width: max-content; padding: 0 1rem; }
-.bracket-round { width: 240px; flex-shrink: 0; }
+/* Tournament Bracket */
+.bracket-wrapper {
+  overflow-x: auto;
+  padding: 1.5rem 0;
+  -webkit-overflow-scrolling: touch;
+  background: var(--bg-accent);
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  margin-top: 1.5rem;
+}
+.bracket-container {
+  display: flex;
+  gap: 2rem;
+  min-width: max-content;
+  padding: 1rem 1.5rem;
+  height: 1250px;
+}
+.bracket-round {
+  width: 250px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  height: 100%;
+}
+.bracket-round-title {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+.bracket-match-card {
+  background: var(--bg-dark);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease-in-out;
+}
+.bracket-match-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(12, 68, 124, 0.25);
+  border-color: var(--primary);
+}
+.bracket-match-card.is-clickable {
+  cursor: pointer;
+}
+.bracket-match-card.is-owned {
+  border-left: 3px solid var(--primary);
+}
+.bracket-team-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+.bracket-team-line.winner {
+  font-weight: 700;
+  color: white;
+}
+.bracket-team-line.winner span:last-child {
+  color: var(--success);
+}
+.bracket-team-line.loser {
+  opacity: 0.6;
+}
+.bracket-team-line.predicted {
+  font-style: italic;
+}
+.owner-dot-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 800;
+  color: black;
+  margin-left: 4px;
+}
 
 .match-card {
   background: var(--bg-accent); border: 1px solid var(--border-light); border-radius: 10px;
