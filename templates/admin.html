@@ -337,6 +337,16 @@
         <span style="font-size:11px;color:var(--muted)">(knockout draws only)</span>
       </div>
 
+      <!-- Shootout winner dropdown (only visible when penalties is checked) -->
+      <div id="penaltyWinnerSection" style="display:none;margin-bottom:0.75rem;margin-left:1.5rem;align-items:center;gap:0.5rem">
+        <label style="font-size:13px;font-weight:500;color:var(--muted)">Shootout Winner:</label>
+        <select id="extraPenaltyWinner" style="padding:4px 8px;font-size:13px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--surface);color:var(--text)">
+          <option value="">Select winner…</option>
+          <option value="team1" id="penaltyWinnerTeam1Option">Team 1</option>
+          <option value="team2" id="penaltyWinnerTeam2Option">Team 2</option>
+        </select>
+      </div>
+
       <!-- Red cards — shown dynamically once teams are selected -->
       <div id="extraRedCardsSection" style="display:none;margin-bottom:0.75rem">
         <div style="font-size:12px;color:var(--muted);margin-bottom:0.4rem">🟥 Red cards</div>
@@ -1217,6 +1227,8 @@ function adminSyncExtraLabels() {
     document.getElementById('extraRCTeam2Label').textContent = t2;
     document.getElementById('extraHTTeam1Label').textContent = t1;
     document.getElementById('extraHTTeam2Label').textContent = t2;
+    document.getElementById('penaltyWinnerTeam1Option').textContent = t1;
+    document.getElementById('penaltyWinnerTeam2Option').textContent = t2;
   }
 }
 
@@ -1226,6 +1238,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const t2sel = document.getElementById('adminMatchTeam2');
   if (t1sel) t1sel.addEventListener('change', () => { adminClearFixtureSelection(); adminSyncExtraLabels(); });
   if (t2sel) t2sel.addEventListener('change', () => { adminClearFixtureSelection(); adminSyncExtraLabels(); });
+
+  const extraPens = document.getElementById('extraPenalties');
+  if (extraPens) {
+    extraPens.addEventListener('change', () => {
+      const winnerSec = document.getElementById('penaltyWinnerSection');
+      if (extraPens.checked) {
+        winnerSec.style.display = 'flex';
+      } else {
+        winnerSec.style.display = 'none';
+        document.getElementById('extraPenaltyWinner').value = '';
+      }
+    });
+  }
 });
 
 async function adminSubmitMatch() {
@@ -1241,7 +1266,15 @@ async function adminSubmitMatch() {
 
   // Build structured extra object directly from UI controls — no text parsing
   const extra = {};
-  if (document.getElementById('extraPenalties').checked) extra.penalties = true;
+  if (document.getElementById('extraPenalties').checked) {
+    extra.penalties = true;
+    const winnerVal = document.getElementById('extraPenaltyWinner').value;
+    if (winnerVal === 'team1') {
+      extra.winner = t1;
+    } else if (winnerVal === 'team2') {
+      extra.winner = t2;
+    }
+  }
   const rc1 = parseInt(document.getElementById('extraRCTeam1').value) || 0;
   const rc2 = parseInt(document.getElementById('extraRCTeam2').value) || 0;
   if (rc1 > 0) extra.red_card_t1 = rc1;
@@ -1258,6 +1291,8 @@ async function adminSubmitMatch() {
     showMsg('adminMatchMsg', `Match recorded! ${t1} ${s1}–${s2} ${t2}`, 'success');
     // Reset extra controls
     document.getElementById('extraPenalties').checked = false;
+    document.getElementById('penaltyWinnerSection').style.display = 'none';
+    document.getElementById('extraPenaltyWinner').value = '';
     document.getElementById('extraRCTeam1').value = 0;
     document.getElementById('extraRCTeam2').value = 0;
     document.getElementById('extraHTTeam1').checked = false;
@@ -1296,6 +1331,47 @@ async function adminFetchScoreFromAPI() {
       document.getElementById('adminScore1').value = json.score1;
       document.getElementById('adminScore2').value = json.score2;
       if (json.stage) document.getElementById('adminMatchStage').value = json.stage;
+      
+      // Ensure team labels are synchronized
+      adminSyncExtraLabels();
+
+      // Populate extra events if returned
+      if (json.extra) {
+        if (json.extra.penalties) {
+          document.getElementById('extraPenalties').checked = true;
+          document.getElementById('penaltyWinnerSection').style.display = 'flex';
+          const t1val = document.getElementById('adminMatchTeam1').value;
+          const t2val = document.getElementById('adminMatchTeam2').value;
+          if (json.extra.winner === t1val) {
+            document.getElementById('extraPenaltyWinner').value = 'team1';
+          } else if (json.extra.winner === t2val) {
+            document.getElementById('extraPenaltyWinner').value = 'team2';
+          } else {
+            document.getElementById('extraPenaltyWinner').value = '';
+          }
+        } else {
+          document.getElementById('extraPenalties').checked = false;
+          document.getElementById('penaltyWinnerSection').style.display = 'none';
+          document.getElementById('extraPenaltyWinner').value = '';
+        }
+        
+        // Populate red cards
+        document.getElementById('extraRCTeam1').value = json.extra.red_card_t1 || 0;
+        document.getElementById('extraRCTeam2').value = json.extra.red_card_t2 || 0;
+        
+        // Populate hat-tricks
+        document.getElementById('extraHTTeam1').checked = !!json.extra.hattrick_t1;
+        document.getElementById('extraHTTeam2').checked = !!json.extra.hattrick_t2;
+      } else {
+        document.getElementById('extraPenalties').checked = false;
+        document.getElementById('penaltyWinnerSection').style.display = 'none';
+        document.getElementById('extraPenaltyWinner').value = '';
+        document.getElementById('extraRCTeam1').value = 0;
+        document.getElementById('extraRCTeam2').value = 0;
+        document.getElementById('extraHTTeam1').checked = false;
+        document.getElementById('extraHTTeam2').checked = false;
+      }
+
       const status = json.status === 'FINISHED' ? '(Finished)' : '(Live)';
       showMsg(msgEl, `Scores updated from API ${status}!`, 'success');
     }

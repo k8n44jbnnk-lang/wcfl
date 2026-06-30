@@ -623,6 +623,18 @@ def fetch_match_result(team1: str, team2: str) -> dict:
                         if is_h_team1: extra["hattrick_t2"] = True
                         else: extra["hattrick_t1"] = True
 
+                h_pen = g.get("home_penalty_score")
+                a_pen = g.get("away_penalty_score")
+                if h_pen is not None and a_pen is not None and h_pen != "null" and a_pen != "null":
+                    try:
+                        h_pen_int, a_pen_int = int(h_pen), int(a_pen)
+                        if h_pen_int > 0 or a_pen_int > 0:
+                            extra["penalties"] = True
+                            is_h_winner = h_pen_int > a_pen_int
+                            extra["winner"] = team1 if (is_h_winner and is_h_team1) or (not is_h_winner and not is_h_team1) else team2
+                    except ValueError:
+                        pass
+
                 result = {
                     "team1": team1, "team2": team2,
                     "score1": int(g.get("home_score")) if _is_name_match(ht, team1) else int(g.get("away_score")),
@@ -1265,6 +1277,16 @@ def validate_match_input(body: dict):
             return "public fixture matches must be recorded as group stage"
         if fixture.get("home") != t1 or fixture.get("away") != t2:
             return "selected fixture teams do not match the public schedule"
+
+    extra = body.get("extra", {})
+    if extra and extra.get("penalties"):
+        if body.get("stage", "group") == "group":
+            return "penalty shootouts cannot occur in the group stage"
+        if s1 != s2:
+            return "matches won on penalties must end in a draw at full time (e.g. 1-1)"
+        winner = extra.get("winner")
+        if not winner or winner not in (t1, t2):
+            return "shootout winner must be one of the playing teams"
     return None
 
 def validate_players(players: list):
