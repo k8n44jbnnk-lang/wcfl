@@ -302,13 +302,13 @@ WC2026_R32_BRACKET = [
 
 WC2026_R16_BRACKET = [
     {"match": 89, "date": "04 Jul 2026", "r32_a": 74, "r32_b": 77},
-    {"match": 90, "date": "04 Jul 2026", "r32_a": 75, "r32_b": 76},
-    {"match": 91, "date": "05 Jul 2026", "r32_a": 78, "r32_b": 79},
-    {"match": 92, "date": "05 Jul 2026", "r32_a": 80, "r32_b": 73},
-    {"match": 93, "date": "06 Jul 2026", "r32_a": 81, "r32_b": 82},
-    {"match": 94, "date": "06 Jul 2026", "r32_a": 83, "r32_b": 84},
-    {"match": 95, "date": "07 Jul 2026", "r32_a": 85, "r32_b": 86},
-    {"match": 96, "date": "07 Jul 2026", "r32_a": 87, "r32_b": 88},
+    {"match": 90, "date": "04 Jul 2026", "r32_a": 73, "r32_b": 75},
+    {"match": 91, "date": "05 Jul 2026", "r32_a": 76, "r32_b": 78},
+    {"match": 92, "date": "05 Jul 2026", "r32_a": 79, "r32_b": 80},
+    {"match": 93, "date": "06 Jul 2026", "r32_a": 83, "r32_b": 84},
+    {"match": 94, "date": "06 Jul 2026", "r32_a": 81, "r32_b": 82},
+    {"match": 95, "date": "07 Jul 2026", "r32_a": 86, "r32_b": 88},
+    {"match": 96, "date": "07 Jul 2026", "r32_a": 85, "r32_b": 87},
 ]
 
 POINTS_DEFAULTS = {
@@ -1045,17 +1045,17 @@ def resolve_match_outcome(match_num, data, sorted_groups, assigned_3rds, resolve
     else:
         BRACKET_TREE = {
             89: {"type": "winner", "a": 74, "b": 77},
-            90: {"type": "winner", "a": 75, "b": 76},
-            91: {"type": "winner", "a": 78, "b": 79},
-            92: {"type": "winner", "a": 80, "b": 73},
-            93: {"type": "winner", "a": 81, "b": 82},
-            94: {"type": "winner", "a": 83, "b": 84},
-            95: {"type": "winner", "a": 85, "b": 86},
-            96: {"type": "winner", "a": 87, "b": 88},
+            90: {"type": "winner", "a": 73, "b": 75},
+            91: {"type": "winner", "a": 76, "b": 78},
+            92: {"type": "winner", "a": 79, "b": 80},
+            93: {"type": "winner", "a": 83, "b": 84},
+            94: {"type": "winner", "a": 81, "b": 82},
+            95: {"type": "winner", "a": 86, "b": 88},
+            96: {"type": "winner", "a": 85, "b": 87},
             
             97: {"type": "winner", "a": 89, "b": 90},
-            98: {"type": "winner", "a": 91, "b": 92},
-            99: {"type": "winner", "a": 93, "b": 94},
+            98: {"type": "winner", "a": 93, "b": 94},
+            99: {"type": "winner", "a": 91, "b": 92},
             100: {"type": "winner", "a": 95, "b": 96},
             
             101: {"type": "winner", "a": 97, "b": 98},
@@ -1198,7 +1198,7 @@ def build_knockout_sections(data: dict) -> list[dict]:
         })
     sections.append({"title": "Round of 16", "matches": r16_items})
 
-    qf_refs = [(97, 89, 90), (98, 91, 92), (99, 93, 94), (100, 95, 96)]
+    qf_refs = [(97, 89, 90), (98, 93, 94), (99, 91, 92), (100, 95, 96)]
     qf_items = []
     for m_num, a, b in qf_refs:
         rec = resolve_record(m_num)
