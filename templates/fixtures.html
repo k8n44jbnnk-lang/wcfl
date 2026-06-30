@@ -73,92 +73,94 @@
       {% for section in knockout_sections if section.title != 'Third-place playoff' %}
       <div class="bracket-round">
         <div class="bracket-round-title">{{ section.title }}</div>
-        {% for item in section.matches %}
-        {% set has_record = item.record is not none %}
-        {% set is_owned = (item.record and (item.record.owner1 or item.record.owner2)) or (not item.record and (data.team_sold.get(item.predicted_team1) or data.team_sold.get(item.predicted_team2))) %}
-        <div class="bracket-match-card {% if is_owned %}is-owned{% endif %} {% if has_record %}is-clickable{% endif %}" {% if has_record %}onclick="window.location='/match/{{ item.record.id }}'"{% endif %}>
-          <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-dim); margin-bottom: 4px; display: flex; justify-content: space-between;">
-            <span>MATCH {{ item.match_num }}</span>
-            {% if item.date %}<span>{{ item.date }}</span>{% endif %}
-          </div>
-          {% if item.record %}
-            {% set t1_name = item.record.team1 %}
-            {% set t2_name = item.record.team2 %}
-            {% set s1 = item.record.score1 %}
-            {% set s2 = item.record.score2 %}
-            {% set t1_owner = data.team_sold.get(t1_name) %}
-            {% set t2_owner = data.team_sold.get(t2_name) %}
-            {% set was_pens = item.record.get("extra", {}).get("penalties") %}
-            {% set pens_winner = item.record.get("extra", {}).get("winner") if was_pens else None %}
-            
-            {% set is_t1_winner = s1 > s2 or (was_pens and pens_winner == t1_name) %}
-            {% set is_t2_winner = s2 > s1 or (was_pens and pens_winner == t2_name) %}
-            
-            <div class="bracket-team-line {% if is_t1_winner %}winner{% else %}loser{% endif %}">
-              <span style="display: flex; align-items: center; gap: 0.4rem;">
-                <span style="font-size: 1.1rem;">{{ team_flag(t1_name) }}</span>
-                <span>{{ t1_name }}</span>
-                {% if t1_owner %}
-                  <span class="owner-dot-badge" style="background: {{ get_player_color(t1_owner) }}" title="Owned by {{ t1_owner }}">{{ t1_owner[0] }}</span>
-                {% endif %}
-              </span>
-              <span style="display: flex; align-items: center; gap: 4px;">
-                <span>{{ s1 }}</span>
-                {% if was_pens and pens_winner == t1_name %}<span style="font-size: 9px; color: var(--success); font-weight: 800;">🎯</span>{% endif %}
-              </span>
+        <div class="bracket-round-matches">
+          {% for item in section.matches %}
+          {% set has_record = item.record is not none %}
+          {% set is_owned = (item.record and (item.record.owner1 or item.record.owner2)) or (not item.record and (data.team_sold.get(item.predicted_team1) or data.team_sold.get(item.predicted_team2))) %}
+          <div class="bracket-match-card {% if is_owned %}is-owned{% endif %} {% if has_record %}is-clickable{% endif %}" {% if has_record %}onclick="window.location='/match/{{ item.record.id }}'"{% endif %}>
+            <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-dim); margin-bottom: 4px; display: flex; justify-content: space-between;">
+              <span>MATCH {{ item.match_num }}</span>
+              {% if item.date %}<span>{{ item.date }}</span>{% endif %}
             </div>
-            <div class="bracket-team-line {% if is_t2_winner %}winner{% else %}loser{% endif %}">
-              <span style="display: flex; align-items: center; gap: 0.4rem;">
-                <span style="font-size: 1.1rem;">{{ team_flag(t2_name) }}</span>
-                <span>{{ t2_name }}</span>
-                {% if t2_owner %}
-                  <span class="owner-dot-badge" style="background: {{ get_player_color(t2_owner) }}" title="Owned by {{ t2_owner }}">{{ t2_owner[0] }}</span>
-                {% endif %}
-              </span>
-              <span style="display: flex; align-items: center; gap: 4px;">
-                <span>{{ s2 }}</span>
-                {% if was_pens and pens_winner == t2_name %}<span style="font-size: 9px; color: var(--success); font-weight: 800;">🎯</span>{% endif %}
-              </span>
-            </div>
-          {% else %}
-            {% set t1_name = item.predicted_team1 %}
-            {% set t2_name = item.predicted_team2 %}
-            {% set t1_owner = data.team_sold.get(t1_name) if t1_name else None %}
-            {% set t2_owner = data.team_sold.get(t2_name) if t2_name else None %}
-            
-            <div class="bracket-team-line predicted" style="opacity: 0.65;">
-              <span style="display: flex; align-items: center; gap: 0.4rem;">
-                {% if t1_name %}
+            {% if item.record %}
+              {% set t1_name = item.record.team1 %}
+              {% set t2_name = item.record.team2 %}
+              {% set s1 = item.record.score1 %}
+              {% set s2 = item.record.score2 %}
+              {% set t1_owner = data.team_sold.get(t1_name) %}
+              {% set t2_owner = data.team_sold.get(t2_name) %}
+              {% set was_pens = item.record.get("extra", {}).get("penalties") %}
+              {% set pens_winner = item.record.get("extra", {}).get("winner") if was_pens else None %}
+              
+              {% set is_t1_winner = s1 > s2 or (was_pens and pens_winner == t1_name) %}
+              {% set is_t2_winner = s2 > s1 or (was_pens and pens_winner == t2_name) %}
+              
+              <div class="bracket-team-line {% if is_t1_winner %}winner{% else %}loser{% endif %}">
+                <span style="display: flex; align-items: center; gap: 0.4rem;">
                   <span style="font-size: 1.1rem;">{{ team_flag(t1_name) }}</span>
                   <span>{{ t1_name }}</span>
                   {% if t1_owner %}
                     <span class="owner-dot-badge" style="background: {{ get_player_color(t1_owner) }}" title="Owned by {{ t1_owner }}">{{ t1_owner[0] }}</span>
                   {% endif %}
-                  <span style="font-size: 0.55rem; color: var(--text-dim); font-style: normal; font-weight: normal;">({{ item.left_label }})</span>
-                {% else %}
-                  <span style="color: var(--text-dim);">{{ item.left_label }}</span>
-                {% endif %}
-              </span>
-              <span>-</span>
-            </div>
-            <div class="bracket-team-line predicted" style="opacity: 0.65;">
-              <span style="display: flex; align-items: center; gap: 0.4rem;">
-                {% if t2_name %}
+                </span>
+                <span style="display: flex; align-items: center; gap: 4px;">
+                  <span>{{ s1 }}</span>
+                  {% if was_pens and pens_winner == t1_name %}<span style="font-size: 9px; color: var(--success); font-weight: 800;">🎯</span>{% endif %}
+                </span>
+              </div>
+              <div class="bracket-team-line {% if is_t2_winner %}winner{% else %}loser{% endif %}">
+                <span style="display: flex; align-items: center; gap: 0.4rem;">
                   <span style="font-size: 1.1rem;">{{ team_flag(t2_name) }}</span>
                   <span>{{ t2_name }}</span>
                   {% if t2_owner %}
                     <span class="owner-dot-badge" style="background: {{ get_player_color(t2_owner) }}" title="Owned by {{ t2_owner }}">{{ t2_owner[0] }}</span>
                   {% endif %}
-                  <span style="font-size: 0.55rem; color: var(--text-dim); font-style: normal; font-weight: normal;">({{ item.right_label }})</span>
-                {% else %}
-                  <span style="color: var(--text-dim);">{{ item.right_label }}</span>
-                {% endif %}
-              </span>
-              <span>-</span>
-            </div>
-          {% endif %}
+                </span>
+                <span style="display: flex; align-items: center; gap: 4px;">
+                  <span>{{ s2 }}</span>
+                  {% if was_pens and pens_winner == t2_name %}<span style="font-size: 9px; color: var(--success); font-weight: 800;">🎯</span>{% endif %}
+                </span>
+              </div>
+            {% else %}
+              {% set t1_name = item.predicted_team1 %}
+              {% set t2_name = item.predicted_team2 %}
+              {% set t1_owner = data.team_sold.get(t1_name) if t1_name else None %}
+              {% set t2_owner = data.team_sold.get(t2_name) if t2_name else None %}
+              
+              <div class="bracket-team-line predicted" style="opacity: 0.65;">
+                <span style="display: flex; align-items: center; gap: 0.4rem;">
+                  {% if t1_name %}
+                    <span style="font-size: 1.1rem;">{{ team_flag(t1_name) }}</span>
+                    <span>{{ t1_name }}</span>
+                    {% if t1_owner %}
+                      <span class="owner-dot-badge" style="background: {{ get_player_color(t1_owner) }}" title="Owned by {{ t1_owner }}">{{ t1_owner[0] }}</span>
+                    {% endif %}
+                    <span style="font-size: 0.55rem; color: var(--text-dim); font-style: normal; font-weight: normal;">({{ item.left_label }})</span>
+                  {% else %}
+                    <span style="color: var(--text-dim);">{{ item.left_label }}</span>
+                  {% endif %}
+                </span>
+                <span>-</span>
+              </div>
+              <div class="bracket-team-line predicted" style="opacity: 0.65;">
+                <span style="display: flex; align-items: center; gap: 0.4rem;">
+                  {% if t2_name %}
+                    <span style="font-size: 1.1rem;">{{ team_flag(t2_name) }}</span>
+                    <span>{{ t2_name }}</span>
+                    {% if t2_owner %}
+                      <span class="owner-dot-badge" style="background: {{ get_player_color(t2_owner) }}" title="Owned by {{ t2_owner }}">{{ t2_owner[0] }}</span>
+                    {% endif %}
+                    <span style="font-size: 0.55rem; color: var(--text-dim); font-style: normal; font-weight: normal;">({{ item.right_label }})</span>
+                  {% else %}
+                    <span style="color: var(--text-dim);">{{ item.right_label }}</span>
+                  {% endif %}
+                </span>
+                <span>-</span>
+              </div>
+            {% endif %}
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
       {% endfor %}
     </div>
