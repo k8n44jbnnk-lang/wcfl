@@ -281,6 +281,26 @@ WC2026_FIXTURES = [
     {"round": "Group L", "stage": "group", "home": "Croatia", "away": "Ghana",    "date": "27 Jun 2026", "group": "L"},
 ]
 
+WC2026_R32_ACTUAL_TEAMS = {
+    73: ("South Africa", "Canada"),
+    74: ("Germany", "Paraguay"),
+    75: ("Netherlands", "Morocco"),
+    76: ("Brazil", "Japan"),
+    77: ("France", "Sweden"),
+    78: ("Ivory Coast", "Norway"),
+    79: ("Mexico", "Ecuador"),
+    80: ("England", "DR Congo"),
+    81: ("USA", "Bosnia and Herzegovina"),
+    82: ("Belgium", "Senegal"),
+    83: ("Portugal", "Croatia"),
+    84: ("Spain", "Austria"),
+    85: ("Switzerland", "Algeria"),
+    86: ("Argentina", "Cape Verde"),
+    87: ("Colombia", "Ghana"),
+    88: ("Australia", "Egypt"),
+}
+
+
 WC2026_R32_BRACKET = [
     {"match": 73, "date": "28 Jun 2026", "slot_a": ("2nd", "A"), "slot_b": ("2nd", "B")},
     {"match": 74, "date": "29 Jun 2026", "slot_a": ("1st", "E"), "slot_b": ("3rd", None)},
@@ -335,7 +355,7 @@ def load_data():
     if not os.path.exists(DATA_FILE):
         return default_data()
     try:
-        with open(DATA_FILE) as f:
+        with open(DATA_FILE, encoding="utf-8") as f:
             data = json.load(f)
         data.pop("current_passes", None)
         return data
@@ -347,8 +367,8 @@ def load_data():
 def save_data(data):
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
     tmp = DATA_FILE + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(data, f, indent=2)
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
     os.replace(tmp, DATA_FILE)
 
 def default_data():
@@ -407,9 +427,36 @@ def get_team_flag(name):
     return "🏳"
 
 
+def normalize_team_name(name: str) -> str:
+    if not name:
+        return ""
+    name = name.strip()
+    mapping = {
+        "Turkey": "Türkiye",
+        "Trkiye": "Türkiye",
+        "Bosnia-Herzegovina": "Bosnia and Herzegovina",
+        "Bosnia and Herzegovina": "Bosnia and Herzegovina",
+        "Congo DR": "DR Congo",
+        "DR Congo": "DR Congo",
+        "Cape Verde Islands": "Cape Verde",
+        "Cape Verde": "Cape Verde",
+    }
+    return mapping.get(name, name)
+
+
+def get_official_team_name(name: str) -> str:
+    norm = normalize_team_name(name)
+    for group_teams in WC2026_GROUPS.values():
+        for t in group_teams:
+            if normalize_team_name(t) == norm:
+                return t
+    return name
+
+
 def get_team_group(name):
+    norm_name = normalize_team_name(name)
     for group_letter, group_teams in WC2026_GROUPS.items():
-        if name in group_teams:
+        if norm_name in [normalize_team_name(t) for t in group_teams]:
             return group_letter
     return None
 
@@ -752,7 +799,8 @@ def _auto_record_match(data, t1, t2, s1, s2, stage, fixture_id, extra=None):
     if any(m.get("fixture_id") == fixture_id for m in data.get("matches", [])): return False
     extra = extra or {}
     result = score_analyser(t1, t2, s1, s2, stage, extra, pts_config=data.get("points_config"))
-    o1, o2 = data["team_sold"].get(t1), data["team_sold"].get(t2)
+    o1 = data["team_sold"].get(get_official_team_name(t1))
+    o2 = data["team_sold"].get(get_official_team_name(t2))
     if o1: data["points"][o1] = data["points"].get(o1, 0) + result["team1"]["points"]
     if o2: data["points"][o2] = data["points"].get(o2, 0) + result["team2"]["points"]
     match_record = {
@@ -922,7 +970,8 @@ def calculate_local_group_standings(data):
     
     for m in data.get("matches", []):
         if m.get("stage") == "group":
-            t1, t2 = m["team1"], m["team2"]
+            t1 = get_official_team_name(m["team1"])
+            t2 = get_official_team_name(m["team2"])
             s1, s2 = int(m["score1"]), int(m["score2"])
             g1, g2 = get_team_group(t1), get_team_group(t2)
             
@@ -1021,25 +1070,9 @@ def resolve_match_outcome(match_num, data, sorted_groups, assigned_3rds, resolve
         return outcome
         
     if match_num <= 88:
-        slot = next((s for s in WC2026_R32_BRACKET if s["match"] == match_num), None)
-        if slot:
-            sa_type, sa_group = slot["slot_a"]
-            if sa_type == "1st":
-                team1 = sorted_groups[sa_group][0]["team"] if sa_group in sorted_groups else "TBD"
-            elif sa_type == "2nd":
-                team1 = sorted_groups[sa_group][1]["team"] if sa_group in sorted_groups else "TBD"
-            else:
-                team1 = "TBD"
-                
-            sb_type, sb_group = slot["slot_b"]
-            if sb_type == "1st":
-                team2 = sorted_groups[sb_group][0]["team"] if sb_group in sorted_groups else "TBD"
-            elif sb_type == "2nd":
-                team2 = sorted_groups[sb_group][1]["team"] if sb_group in sorted_groups else "TBD"
-            elif sb_type == "3rd":
-                team2 = assigned_3rds.get(match_num, "TBD")
-            else:
-                team2 = "TBD"
+        actual_teams = WC2026_R32_ACTUAL_TEAMS.get(match_num)
+        if actual_teams:
+            team1, team2 = actual_teams
         else:
             team1, team2 = "TBD", "TBD"
     else:
@@ -1077,10 +1110,14 @@ def resolve_match_outcome(match_num, data, sorted_groups, assigned_3rds, resolve
 
     # Fallback team matching check: if a match exists in database between team1 and team2 in knockout stages
     if team1 != "TBD" and team2 != "TBD":
+        norm_t1 = normalize_team_name(team1)
+        norm_t2 = normalize_team_name(team2)
         for m in data.get("matches", []):
             if m.get("stage") != "group":
                 mt1, mt2 = m.get("team1"), m.get("team2")
-                if (mt1 == team1 and mt2 == team2) or (mt1 == team2 and mt2 == team1):
+                norm_mt1 = normalize_team_name(mt1)
+                norm_mt2 = normalize_team_name(mt2)
+                if (norm_mt1 == norm_t1 and norm_mt2 == norm_t2) or (norm_mt1 == norm_t2 and norm_mt2 == norm_t1):
                     score1 = m["score1"]
                     score2 = m["score2"]
                     res = m.get("result", {})
@@ -1095,7 +1132,7 @@ def resolve_match_outcome(match_num, data, sorted_groups, assigned_3rds, resolve
                     else:
                         rec_winner = mt1 if res.get("team1", {}).get("points", 0) > res.get("team2", {}).get("points", 0) else mt2
                         
-                    is_winner_team1 = (rec_winner == team1)
+                    is_winner_team1 = (normalize_team_name(rec_winner) == norm_t1)
                     winner = team1 if is_winner_team1 else team2
                     loser = team2 if is_winner_team1 else team1
                     outcome = {"team1": team1, "team2": team2, "winner": winner, "loser": loser, "played": True}
@@ -1155,10 +1192,13 @@ def build_knockout_sections(data: dict) -> list[dict]:
         if not pred or pred.get("team1") == "TBD" or pred.get("team2") == "TBD":
             return None
         t1, t2 = pred["team1"], pred["team2"]
+        norm1, norm2 = normalize_team_name(t1), normalize_team_name(t2)
         for m in matches_list:
             if m.get("stage") != "group":
                 mt1, mt2 = m.get("team1"), m.get("team2")
-                if (mt1 == t1 and mt2 == t2) or (mt1 == t2 and mt2 == t1):
+                norm_mt1 = normalize_team_name(mt1)
+                norm_mt2 = normalize_team_name(mt2)
+                if (norm_mt1 == norm1 and norm_mt2 == norm2) or (norm_mt1 == norm2 and norm_mt2 == norm1):
                     return m
         return None
         
@@ -1656,8 +1696,8 @@ def api_match_add():
     fixture_id = body.get("fixture_id")
     fixture = find_public_group_fixture(fixture_id) if fixture_id else None
     result = score_analyser(t1, t2, s1, s2, stage, extra, pts_config=data.get("points_config"))
-    o1 = data["team_sold"].get(t1)
-    o2 = data["team_sold"].get(t2)
+    o1 = data["team_sold"].get(get_official_team_name(t1))
+    o2 = data["team_sold"].get(get_official_team_name(t2))
     if o1: data["points"][o1] = data["points"].get(o1, 0) + result["team1"]["points"]
     if o2: data["points"][o2] = data["points"].get(o2, 0) + result["team2"]["points"]
     match_record = {
@@ -1793,76 +1833,107 @@ def api_simulate_knockout():
 @app.route("/api/match/sync-all", methods=["POST"])
 @admin_required
 def api_match_sync_all():
-    """Admin: scan official API for all finished matches and record any that are missing."""
+    """Admin: scan official API for all matches and record or update them."""
     data = load_data()
     headers = {"X-Auth-Token": FOOTBALL_API_KEY} if FOOTBALL_API_KEY else {}
     try:
         resp = requests.get(
             f"{FOOTBALL_API_BASE}/competitions/{WC2026_COMPETITION}/matches",
-            headers=headers, params={"status": "FINISHED"}, timeout=15
+            headers=headers, timeout=15
         )
         if resp.status_code != 200:
             return jsonify({"error": f"API error: {resp.status_code}"}), 500
         
         matches = resp.json().get("matches", [])
         if not matches:
-            return jsonify({"ok": True, "count": 0, "message": "No finished matches found in API."})
+            return jsonify({"ok": True, "count": 0, "message": "No matches found in API."})
 
-        # Track existing match pairs to avoid duplicates
-        recorded_ids = {str(m.get("fixture_id")) for m in data.get("matches", []) if m.get("fixture_id")}
+        count_added = 0
+        count_updated = 0
         
-        count = 0
         for m in matches:
             api_id = str(m["id"])
-            if api_id in recorded_ids:
-                continue
+            status = m.get("status", "")
+            stage = _map_stage(m.get("stage", "group"))
             
             t1_raw = m["homeTeam"]["name"]
             t2_raw = m["awayTeam"]["name"]
-            
-            # Map API names to internal names if needed
             t1 = next((t["name"] for t in TEAMS if _is_name_match(t["name"], t1_raw)), t1_raw)
             t2 = next((t["name"] for t in TEAMS if _is_name_match(t["name"], t2_raw)), t2_raw)
             
-            extra = {}
-            if m["score"].get("duration") == "PENALTY_SHOOTOUT":
-                extra["penalties"] = True
-                extra["winner"] = t1 if m["score"]["winner"] == "HOME_TEAM" else t2
-
-            # Extract red cards and hat-tricks
-            rc_t1, rc_t2 = 0, 0
-            for b in m.get("bookings", []):
-                if b.get("type") in ("RED_CARD", "YELLOW_RED_CARD"):
-                    if _is_name_match(b["team"]["name"], t1): rc_t1 += 1
-                    else: rc_t2 += 1
-            if rc_t1 > 0: extra["red_card_t1"] = rc_t1
-            if rc_t2 > 0: extra["red_card_t2"] = rc_t2
-            
-            counts = {}
-            for g in m.get("goals", []):
-                scorer = g.get("scorer", {})
-                sid = scorer.get("id") or scorer.get("name")
-                if sid: counts[sid] = counts.get(sid, 0) + 1
-            for sid, count in counts.items():
-                if count >= 3:
-                    scorer_team = next((g["team"]["name"] for g in m.get("goals", []) if (g.get("scorer", {}).get("id") or g.get("scorer", {}).get("name")) == sid), "")
-                    if _is_name_match(scorer_team, t1): extra["hattrick_t1"] = True
-                    else: extra["hattrick_t2"] = True
-
-            # Enrich hattricks from fallback API if not already set (e.g. on free tier)
-            if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
-                _enrich_hattricks_from_fallback(t1, t2, extra)
-
+            # Skip scheduled group matches
+            if stage == "group" and status != "FINISHED":
+                continue
+                
             score = _get_api_match_score(m)
-            s1, s2 = score["home"], score["away"]
-            stage = _map_stage(m.get("stage", "group"))
+            s1 = score.get("home")
+            s2 = score.get("away")
             
-            # Auto-record
-            result = score_analyser(t1, t2, s1, s2, stage, extra, pts_config=data.get("points_config"))
-            o1, o2 = data["team_sold"].get(t1), data["team_sold"].get(t2)
-            if o1: data["points"][o1] = data["points"].get(o1, 0) + result["team1"]["points"]
-            if o2: data["points"][o2] = data["points"].get(o2, 0) + result["team2"]["points"]
+            if status != "FINISHED":
+                s1 = None
+                s2 = None
+
+            existing = next((x for x in data.get("matches", []) if str(x.get("fixture_id")) == api_id), None)
             
+            extra = {}
+            if status == "FINISHED":
+                if m["score"].get("duration") == "PENALTY_SHOOTOUT":
+                    extra["penalties"] = True
+                    extra["winner"] = t1 if m["score"]["winner"] == "HOME_TEAM" else t2
+                
+                rc_t1, rc_t2 = 0, 0
+                for b in m.get("bookings", []):
+                    if b.get("type") in ("RED_CARD", "YELLOW_RED_CARD"):
+                        if _is_name_match(b["team"]["name"], t1): rc_t1 += 1
+                        else: rc_t2 += 1
+                if rc_t1 > 0: extra["red_card_t1"] = rc_t1
+                if rc_t2 > 0: extra["red_card_t2"] = rc_t2
+                
+                counts = {}
+                for g in m.get("goals", []):
+                    scorer = g.get("scorer", {})
+                    sid = scorer.get("id") or scorer.get("name")
+                    if sid: counts[sid] = counts.get(sid, 0) + 1
+                for sid, goal_count in counts.items():
+                    if goal_count >= 3:
+                        scorer_team = next((g["team"]["name"] for g in m.get("goals", []) if (g.get("scorer", {}).get("id") or g.get("scorer", {}).get("name")) == sid), "")
+                        if _is_name_match(scorer_team, t1): extra["hattrick_t1"] = True
+                        else: extra["hattrick_t2"] = True
+                
+                if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
+                    _enrich_hattricks_from_fallback(t1, t2, extra)
+
+            if existing:
+                if existing.get("score1") is None and status == "FINISHED":
+                    existing["score1"] = s1
+                    existing["score2"] = s2
+                    existing["extra"] = extra
+                    
+                    result = score_analyser(t1, t2, s1, s2, stage, extra, pts_config=data.get("points_config"))
+                    existing["result"] = result
+                    
+                    o1 = data["team_sold"].get(get_official_team_name(t1))
+                    o2 = data["team_sold"].get(get_official_team_name(t2))
+                    existing["owner1"] = o1
+                    existing["owner2"] = o2
+                    if o1: data["points"][o1] = data["points"].get(o1, 0) + result["team1"]["points"]
+                    if o2: data["points"][o2] = data["points"].get(o2, 0) + result["team2"]["points"]
+                    
+                    count_updated += 1
+                continue
+
+            result = {}
+            o1, o2 = None, None
+            if status == "FINISHED":
+                result = score_analyser(t1, t2, s1, s2, stage, extra, pts_config=data.get("points_config"))
+                o1 = data["team_sold"].get(get_official_team_name(t1))
+                o2 = data["team_sold"].get(get_official_team_name(t2))
+                if o1: data["points"][o1] = data["points"].get(o1, 0) + result["team1"]["points"]
+                if o2: data["points"][o2] = data["points"].get(o2, 0) + result["team2"]["points"]
+            else:
+                o1 = data["team_sold"].get(get_official_team_name(t1))
+                o2 = data["team_sold"].get(get_official_team_name(t2))
+
             utc = m.get("utcDate", "")
             try:
                 dt = datetime.strptime(utc, "%Y-%m-%dT%H:%M:%SZ")
@@ -1877,13 +1948,12 @@ def api_match_sync_all():
                 "fixture_id": api_id,
             }
             data["matches"].insert(0, match_record)
-            recorded_ids.add(api_id)
-            count += 1
+            count_added += 1
             
-        if count > 0:
+        if count_added > 0 or count_updated > 0:
             save_data(data)
             
-        return jsonify({"ok": True, "count": count, "message": f"Successfully synced {count} new matches."})
+        return jsonify({"ok": True, "added": count_added, "updated": count_updated, "message": f"Synced matches (added: {count_added}, updated: {count_updated})."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
