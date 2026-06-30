@@ -1428,10 +1428,102 @@ def admin():
                            public_fixtures_error=public_fixtures_error,
                            active_page="admin")
 
+def get_dashboard_data(data):
+    players = [p["name"] for p in data.get("players", [])]
+    if not players:
+        return {}
+        
+    fixture_matchday_map = {}
+    group_counts = {}
+    for f in WC2026_FIXTURES:
+        g = f.get("group")
+        group_counts[g] = group_counts.get(g, 0) + 1
+        idx = group_counts[g]
+        if idx <= 2:
+            md = "MD1"
+        elif idx <= 4:
+            md = "MD2"
+        else:
+            md = "MD3"
+        h = normalize_team_name(f["home"])
+        a = normalize_team_name(f["away"])
+        fixture_matchday_map[(h, a)] = md
+        fixture_matchday_map[(a, h)] = md
+
+    rounds = ["MD1", "MD2", "MD3", "R032", "R016", "QF", "SF", "FINAL"]
+    round_points = {p: {r: 0 for r in rounds} for p in players}
+    played_rounds = set()
+    
+    for m in data.get("matches", []):
+        stage = m.get("stage")
+        if stage == "group":
+            h = normalize_team_name(m["team1"])
+            a = normalize_team_name(m["team2"])
+            r_label = fixture_matchday_map.get((h, a), "MD1")
+        elif stage == "r32":
+            r_label = "R032"
+        elif stage == "r16":
+            r_label = "R016"
+        elif stage == "qf":
+            r_label = "QF"
+        elif stage == "sf":
+            r_label = "SF"
+        elif stage == "final":
+            r_label = "FINAL"
+        else:
+            continue
+            
+        res = m.get("result", {})
+        if res:
+            played_rounds.add(r_label)
+            o1, o2 = m.get("owner1"), m.get("owner2")
+            if o1 in round_points:
+                round_points[o1][r_label] += res.get("team1", {}).get("points", 0)
+            if o2 in round_points:
+                round_points[o2][r_label] += res.get("team2", {}).get("points", 0)
+
+    if not played_rounds:
+        played_rounds.add("MD1")
+        
+    active_round = "MD1"
+    for r in rounds:
+        if r in played_rounds:
+            active_round = r
+            
+    cumulative = {p: {} for p in players}
+    for p in players:
+        curr_total = 0
+        for r in rounds:
+            curr_total += round_points[p][r]
+            cumulative[p][r] = curr_total
+            
+    ranks = {p: {} for p in players}
+    for r in rounds:
+        sorted_players = sorted(players, key=lambda p: (cumulative[p][r], p), reverse=True)
+        curr_rank = 1
+        for idx, player in enumerate(sorted_players):
+            if idx > 0:
+                prev_player = sorted_players[idx-1]
+                if cumulative[player][r] < cumulative[prev_player][r]:
+                    curr_rank = idx + 1
+            ranks[player][r] = curr_rank
+
+    payload = {
+        "rounds": rounds,
+        "players": players,
+        "active_round": active_round,
+        "played_rounds": list(played_rounds),
+        "round_points": round_points,
+        "cumulative": cumulative,
+        "ranks": ranks,
+        "colors": {p: get_player_color(p) for p in players},
+    }
+    return payload
+
+
 @app.route("/")
 def index():
     data = load_data()
-    # Get player teams organized by group
     player_teams_by_group = {}
     player_matches = {}
     if data.get("players"):
@@ -1447,6 +1539,8 @@ def index():
 
     fx_data = fetch_all_fixtures()
     next_match = get_next_match(fx_data)
+    
+    dashboard_data = get_dashboard_data(data)
 
     return render_template(
         "index.html",
@@ -1456,7 +1550,8 @@ def index():
         player_teams_by_group=player_teams_by_group,
         player_matches=player_matches,
         next_match=next_match,
-        get_player_color=get_player_color
+        get_player_color=get_player_color,
+        dashboard_json=json.dumps(dashboard_data)
     )
 
 @app.route("/how-to-play")

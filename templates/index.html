@@ -16,7 +16,7 @@
 <div class="page-container">
 
   {# ── Dashboard Stats ── #}
-  <section style="margin-bottom: 2rem;">
+  <section style="margin-bottom: 1.5rem;">
     <div class="stats-row">
       <div class="stat-card">
         <span class="stat-icon">🏃</span>
@@ -35,6 +35,105 @@
       </div>
     </div>
   </section>
+
+  {# ── Interactive Stats Dashboard ── #}
+  {% if dashboard_json %}
+  <section class="standard-card dashboard-section" style="margin-bottom: 2rem; background: #070b13; border: 1px solid var(--border-light); padding: 1.5rem;">
+    <div class="db-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <span style="font-size: 2.5rem; line-height: 1;">🏆</span>
+        <div>
+          <h2 style="font-family: Lexend; font-weight: 800; font-size: 1.35rem; color: white; letter-spacing: -0.02em; margin-bottom: 2px; line-height: 1.2;">FIFA WORLD CUP <span class="text-gradient">FANTASY LEAGUE</span></h2>
+          <p style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.25em; color: var(--accent-gold); font-weight: 700; margin: 0;">Road to Glory • Live Stats</p>
+        </div>
+      </div>
+      <div class="db-selector" style="display: flex; flex-wrap: wrap; gap: 0.4rem;" id="matchdaySelector">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      <div class="db-stat-card" style="background: rgba(255, 191, 36, 0.04); border: 1px solid rgba(255, 191, 36, 0.15); border-radius: 10px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+        <div style="font-size: 2rem; color: var(--accent-gold);">👑</div>
+        <div>
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); font-weight: 600;">Current Leader</div>
+          <div style="font-family: Lexend; font-weight: 800; font-size: 1.25rem; color: white; line-height: 1.2;" id="valLeader">-</div>
+          <div style="font-size: 0.75rem; color: var(--accent-gold); font-weight: 700; margin-top: 2px;" id="valLeaderPts">-</div>
+        </div>
+      </div>
+      <div class="db-stat-card" style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 10px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+        <div style="font-size: 2rem; color: var(--success);">📈</div>
+        <div>
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); font-weight: 600;">Biggest Climber</div>
+          <div style="font-family: Lexend; font-weight: 800; font-size: 1.25rem; color: white; line-height: 1.2;" id="valClimber">-</div>
+          <div style="font-size: 0.75rem; color: var(--success); font-weight: 700; margin-top: 2px;" id="valClimberChange">-</div>
+        </div>
+      </div>
+      <div class="db-stat-card" style="background: rgba(239, 68, 68, 0.04); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 10px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+        <div style="font-size: 2rem; color: var(--danger);">📉</div>
+        <div>
+          <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); font-weight: 600;">Biggest Faller</div>
+          <div style="font-family: Lexend; font-weight: 800; font-size: 1.25rem; color: white; line-height: 1.2;" id="valFaller">-</div>
+          <div style="font-size: 0.75rem; color: var(--danger); font-weight: 700; margin-top: 2px;" id="valFallerChange">-</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="db-grid">
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="background: #0b0f19; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; height: 350px;">
+          <h3 style="font-family: Lexend; font-weight: 600; font-size: 0.85rem; color: white; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;">
+            📈 RANK MOVEMENT OVER ROUNDS
+          </h3>
+          <div style="flex-grow: 1; position: relative; height: calc(100% - 2rem);">
+            <canvas id="rankMovementChart"></canvas>
+          </div>
+        </div>
+        <div style="background: #0b0f19; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; height: 350px;">
+          <h3 style="font-family: Lexend; font-weight: 600; font-size: 0.85rem; color: white; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;">
+            📊 POINTS PROGRESSION
+          </h3>
+          <div style="flex-grow: 1; position: relative; height: calc(100% - 2rem);">
+            <canvas id="pointsProgressionChart"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="background: #0b0f19; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; flex-grow: 1; display: flex; flex-direction: column; min-height: 480px;">
+          <h3 style="font-family: Lexend; font-weight: 600; font-size: 0.85rem; color: white; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;" id="standingsTitle">
+            🏆 LIVE STANDINGS
+          </h3>
+          <div style="overflow-x: auto; flex-grow: 1;">
+            <table class="db-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem;" id="dbStandingsTable">
+              <!-- Filled dynamically -->
+            </table>
+          </div>
+        </div>
+        
+        <div style="background: #0b0f19; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem;">
+          <h3 style="font-family: Lexend; font-weight: 600; font-size: 0.85rem; color: white; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;" id="highlightsTitle">
+            ⭐ HIGHLIGHTS
+          </h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="background: rgba(251, 191, 36, 0.03); border: 1px solid rgba(251, 191, 36, 0.1); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;">
+              <span style="font-size: 1.5rem;">👟</span>
+              <span style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Top Scorer (Round)</span>
+              <span style="font-family: Lexend; font-weight: 800; font-size: 1.1rem; color: var(--accent-gold);" id="highlightTopScorerPts">-</span>
+              <span style="font-size: 0.75rem; font-weight: 700; color: white;" id="highlightTopScorerName">-</span>
+            </div>
+            <div style="background: rgba(99, 102, 241, 0.03); border: 1px solid rgba(99, 102, 241, 0.1); border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;">
+              <span style="font-size: 1.5rem;">⚔️</span>
+              <span style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600;">Closest Battle</span>
+              <span style="font-family: Lexend; font-weight: 800; font-size: 1.1rem; color: var(--secondary);" id="highlightClosestBattleDiff">-</span>
+              <span style="font-size: 0.75rem; font-weight: 700; color: white;" id="highlightClosestBattleNames">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
 
   <div class="bento-grid">
 
@@ -173,6 +272,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 function toggleSquad(header) {
   header.classList.toggle('active');
@@ -196,12 +296,337 @@ function animateCounter(id, endValue, duration = 800) {
   }, 16);
 }
 
+// ── Interactive Stats Dashboard ──
+const dbData = {{ dashboard_json | safe if dashboard_json else 'null' }};
+let selectedRound = dbData ? dbData.active_round : null;
+let rankChart = null;
+let pointsChart = null;
+
+function getPrevRound(round) {
+  if (!dbData) return null;
+  const idx = dbData.rounds.indexOf(round);
+  return idx > 0 ? dbData.rounds[idx - 1] : null;
+}
+
+function initSelector() {
+  const container = document.getElementById("matchdaySelector");
+  if (!container) return;
+  container.innerHTML = "";
+  
+  dbData.rounds.forEach(r => {
+    const pill = document.createElement("button");
+    pill.className = "db-pill";
+    pill.textContent = r;
+    
+    const isPlayed = dbData.played_rounds.includes(r);
+    if (r === selectedRound) {
+      pill.classList.add("active");
+    }
+    
+    if (!isPlayed) {
+      pill.classList.add("disabled");
+      pill.title = "Not started yet";
+    } else {
+      pill.onclick = () => {
+        document.querySelectorAll(".db-pill").forEach(p => p.classList.remove("active"));
+        pill.classList.add("active");
+        selectedRound = r;
+        updateDashboard();
+      };
+    }
+    container.appendChild(pill);
+  });
+}
+
+function updateDashboard() {
+  if (!dbData) return;
+  
+  // Titles
+  document.getElementById("standingsTitle").textContent = `🏆 LIVE STANDINGS (AFTER ${selectedRound})`;
+  document.getElementById("highlightsTitle").textContent = `⭐ ${selectedRound} HIGHLIGHTS`;
+  
+  // Leader
+  const sortedPlayers = [...dbData.players].sort((a, b) => dbData.cumulative[b][selectedRound] - dbData.cumulative[a][selectedRound]);
+  const leader = sortedPlayers[0];
+  const leaderPts = dbData.cumulative[leader][selectedRound];
+  document.getElementById("valLeader").textContent = leader.toUpperCase();
+  document.getElementById("valLeaderPts").textContent = `${leaderPts} PTS • Rank 1`;
+  
+  // Climber & Faller
+  const prevRound = getPrevRound(selectedRound);
+  if (prevRound) {
+    let maxClimb = -Infinity;
+    let climber = null;
+    let minFall = Infinity;
+    let faller = null;
+    
+    dbData.players.forEach(p => {
+      const change = dbData.ranks[p][prevRound] - dbData.ranks[p][selectedRound];
+      if (change > 0 && change > maxClimb) {
+        maxClimb = change;
+        climber = p;
+      }
+      if (change < 0 && change < minFall) {
+        minFall = change;
+        faller = p;
+      }
+    });
+    
+    if (climber) {
+      document.getElementById("valClimber").textContent = climber.toUpperCase();
+      document.getElementById("valClimberChange").textContent = `▲ ${maxClimb} (Rank ${dbData.ranks[climber][prevRound]} to ${dbData.ranks[climber][selectedRound]})`;
+    } else {
+      document.getElementById("valClimber").textContent = "-";
+      document.getElementById("valClimberChange").textContent = "No Climbers";
+    }
+    
+    if (faller) {
+      document.getElementById("valFaller").textContent = faller.toUpperCase();
+      document.getElementById("valFallerChange").textContent = `▼ ${Math.abs(minFall)} (Rank ${dbData.ranks[faller][prevRound]} to ${dbData.ranks[faller][selectedRound]})`;
+    } else {
+      document.getElementById("valFaller").textContent = "-";
+      document.getElementById("valFallerChange").textContent = "No Fallers";
+    }
+  } else {
+    document.getElementById("valClimber").textContent = "-";
+    document.getElementById("valClimberChange").textContent = "N/A (MD1)";
+    document.getElementById("valFaller").textContent = "-";
+    document.getElementById("valFallerChange").textContent = "N/A (MD1)";
+  }
+  
+  // Table
+  const table = document.getElementById("dbStandingsTable");
+  if (table) {
+    table.innerHTML = "";
+    const trHead = document.createElement("tr");
+    trHead.innerHTML = `
+      <th style="width: 50px; text-align: center;">Pos</th>
+      <th>Player</th>
+    `;
+    const selectedIdx = dbData.rounds.indexOf(selectedRound);
+    const visibleRounds = dbData.rounds.slice(0, selectedIdx + 1);
+    
+    visibleRounds.forEach(r => {
+      trHead.innerHTML += `<th style="text-align: center;">${r}</th>`;
+    });
+    trHead.innerHTML += `
+      <th style="text-align: center; width: 100px;">Total Pts</th>
+      <th style="text-align: center; width: 80px;">Change</th>
+    `;
+    table.appendChild(trHead);
+    
+    sortedPlayers.forEach(p => {
+      const tr = document.createElement("tr");
+      const rk = dbData.ranks[p][selectedRound];
+      let posText = rk;
+      if (rk === 1) posText = "🥇";
+      else if (rk === 2) posText = "🥈";
+      else if (rk === 3) posText = "🥉";
+      
+      const pColor = dbData.colors[p] || "#3b82f6";
+      let html = `
+        <td style="font-weight: 800; text-align: center;">${posText}</td>
+        <td style="font-weight: 700; display: flex; align-items: center; gap: 8px;">
+          <span class="avatar-sm" style="background: ${pColor}; width: 24px; height: 24px; font-size: 0.65rem; margin: 0; line-height: 24px; display: inline-block; text-align: center; border-radius: 50%; color: white;">${p[0]}</span>
+          <span style="color: ${pColor};">${p}</span>
+        </td>
+      `;
+      
+      visibleRounds.forEach(r => {
+        html += `<td style="text-align: center; color: var(--text-muted);">${dbData.cumulative[p][r]}</td>`;
+      });
+      
+      html += `<td style="text-align: center; font-weight: 900; color: white; font-size: 1.05rem;">${dbData.cumulative[p][selectedRound]}</td>`;
+      
+      let changeHtml = '<span style="color: var(--text-dim);">-</span>';
+      if (prevRound) {
+        const change = dbData.ranks[p][prevRound] - dbData.ranks[p][selectedRound];
+        if (change > 0) {
+          changeHtml = `<span style="color: var(--success); font-weight: 800;">▲ ${change}</span>`;
+        } else if (change < 0) {
+          changeHtml = `<span style="color: var(--danger); font-weight: 800;">▼ ${Math.abs(change)}</span>`;
+        }
+      }
+      html += `<td style="text-align: center;">${changeHtml}</td>`;
+      
+      tr.innerHTML = html;
+      table.appendChild(tr);
+    });
+  }
+  
+  // Highlights
+  let maxPts = -Infinity;
+  let topScorers = [];
+  dbData.players.forEach(p => {
+    const pts = dbData.round_points[p][selectedRound];
+    if (pts > maxPts) {
+      maxPts = pts;
+      topScorers = [p];
+    } else if (pts === maxPts) {
+      topScorers.push(p);
+    }
+  });
+  document.getElementById("highlightTopScorerPts").textContent = `${maxPts} PTS`;
+  document.getElementById("highlightTopScorerName").textContent = topScorers.join(" & ").toUpperCase();
+  
+  let minDiff = Infinity;
+  let closestPairs = [];
+  for (let i = 0; i < sortedPlayers.length - 1; i++) {
+    const p1 = sortedPlayers[i];
+    const p2 = sortedPlayers[i + 1];
+    const diff = dbData.cumulative[p1][selectedRound] - dbData.cumulative[p2][selectedRound];
+    if (diff < minDiff) {
+      minDiff = diff;
+      closestPairs = [{p1, p2, pts: dbData.cumulative[p1][selectedRound]}];
+    } else if (diff === minDiff) {
+      closestPairs.push({p1, p2, pts: dbData.cumulative[p1][selectedRound]});
+    }
+  }
+  
+  if (closestPairs.length > 0) {
+    const battle = closestPairs[0];
+    const diffText = minDiff === 0 ? "TIED ON POINTS" : `${minDiff} PT DIFF`;
+    document.getElementById("highlightClosestBattleDiff").textContent = diffText;
+    document.getElementById("highlightClosestBattleNames").textContent = `${battle.p1} & ${battle.p2} (${battle.pts} PTS)`;
+  }
+  
+  // Update Charts dynamically
+  const activeIdx = dbData.rounds.indexOf(selectedRound);
+  const currentLabels = dbData.rounds.slice(0, activeIdx + 1);
+  
+  if (rankChart) {
+    rankChart.data.labels = currentLabels;
+    rankChart.data.datasets.forEach(dataset => {
+      dataset.data = currentLabels.map(r => dbData.ranks[dataset.label][r]);
+    });
+    rankChart.update();
+  }
+  
+  if (pointsChart) {
+    pointsChart.data.labels = currentLabels;
+    pointsChart.data.datasets.forEach(dataset => {
+      dataset.data = currentLabels.map(r => dbData.cumulative[dataset.label][r]);
+    });
+    pointsChart.update();
+  }
+}
+
+function initCharts() {
+  if (!dbData) return;
+  const activeIdx = dbData.rounds.indexOf(selectedRound);
+  const chartLabels = dbData.rounds.slice(0, activeIdx + 1);
+  
+  // Rank Chart
+  const rankCtx = document.getElementById("rankMovementChart").getContext("2d");
+  const rankDatasets = dbData.players.map(p => {
+    const pColor = dbData.colors[p] || "#3b82f6";
+    return {
+      label: p,
+      data: chartLabels.map(r => dbData.ranks[p][r]),
+      borderColor: pColor,
+      backgroundColor: pColor,
+      borderWidth: 2.5,
+      tension: 0.3,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      fill: false
+    };
+  });
+  
+  rankChart = new Chart(rankCtx, {
+    type: 'line',
+    data: { labels: chartLabels, datasets: rankDatasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { color: '#94a3b8', font: { family: 'Lexend', size: 9 }, boxWidth: 10 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return ` ${context.dataset.label}: Rank ${context.raw}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { color: '#94a3b8', font: { family: 'Lexend', size: 9 } }
+        },
+        y: {
+          min: 1,
+          max: dbData.players.length,
+          reverse: true,
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { stepSize: 1, color: '#94a3b8', font: { family: 'Lexend', size: 9 } }
+        }
+      }
+    }
+  });
+
+  // Points Chart
+  const pointsCtx = document.getElementById("pointsProgressionChart").getContext("2d");
+  const pointsDatasets = dbData.players.map(p => {
+    const pColor = dbData.colors[p] || "#3b82f6";
+    return {
+      label: p,
+      data: chartLabels.map(r => dbData.cumulative[p][r]),
+      borderColor: pColor,
+      backgroundColor: pColor,
+      borderWidth: 2.5,
+      tension: 0.3,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      fill: false
+    };
+  });
+  
+  pointsChart = new Chart(pointsCtx, {
+    type: 'line',
+    data: { labels: chartLabels, datasets: pointsDatasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { color: '#94a3b8', font: { family: 'Lexend', size: 9 }, boxWidth: 10 }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { color: '#94a3b8', font: { family: 'Lexend', size: 9 } }
+        },
+        y: {
+          min: 0,
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: '#94a3b8', font: { family: 'Lexend', size: 9 } }
+        }
+      }
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   animateCounter('matchesPlayed', {{ data.matches | length }});
   animateCounter('totPoints', {{ data.points.values() | sum }});
+  
   const finalDate = new Date('2026-07-19T00:00:00Z');
   const diff = Math.ceil((finalDate - new Date()) / (1000 * 60 * 60 * 24));
   animateCounter('daysLeft', diff > 0 ? diff : 0);
+  
+  if (dbData) {
+    initSelector();
+    initCharts();
+    updateDashboard();
+  }
 });
 </script>
 {% endblock %}
