@@ -453,7 +453,9 @@ def _map_stage(api_stage: str) -> str:
     mapping = {
         "GROUP_STAGE": "group",
         "ROUND_OF_32": "r32",
+        "LAST_32": "r32",
         "ROUND_OF_16": "r16",
+        "LAST_16": "r16",
         "QUARTER_FINALS": "qf",
         "SEMI_FINALS": "sf",
         "FINAL": "final",
@@ -518,6 +520,18 @@ def _enrich_hattricks_from_fallback(team1, team2, extra):
         logging.error("Error during enrichment: %s", e)
 
 
+def _get_api_match_score(m):
+    score = m.get("score") or {}
+    if score.get("duration") == "PENALTY_SHOOTOUT":
+        ft = score.get("fullTime") or {}
+        pen = score.get("penalties") or {}
+        h = (ft.get("home") or 0) - (pen.get("home") or 0)
+        a = (ft.get("away") or 0) - (pen.get("away") or 0)
+        return {"home": max(0, h), "away": max(0, a)}
+    else:
+        ft = score.get("fullTime") or {}
+        return {"home": ft.get("home") or 0, "away": ft.get("away") or 0}
+
 def fetch_match_result(team1: str, team2: str) -> dict:
     cache_key = f"{team1}|{team2}"
     now = time.time()
@@ -538,7 +552,7 @@ def fetch_match_result(team1: str, team2: str) -> dict:
             for m in reversed(matches):
                 ht_name, at_name = m["homeTeam"]["name"], m["awayTeam"]["name"]
                 if _match_team_names(ht_name, at_name, team1, team2):
-                    score = m["score"]["fullTime"]
+                    score = _get_api_match_score(m)
                     stage = _map_stage(m.get("stage", ""))
                     status = m.get("status")
                     
@@ -725,7 +739,7 @@ def api_match_sync_live():
                     if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
                         _enrich_hattricks_from_fallback(t1, t2, extra)
 
-                    score = m["score"]["fullTime"]
+                    score = _get_api_match_score(m)
                     res = _auto_record_match(data, t1, t2, score["home"], score["away"], _map_stage(m.get("stage", "")), str(m["id"]), extra)
                     if res: count += 1
         
@@ -777,7 +791,7 @@ def fetch_all_fixtures() -> dict:
                     display_dt = dt.strftime("%d %b %Y, %H:%M")
                 except ValueError:
                     display_dt = utc
-                score = m.get("score", {}).get("fullTime", {})
+                score = _get_api_match_score(m)
                 fixtures.append({
                     "id": m["id"],
                     "round": m.get("matchday") or m.get("stage", ""),
@@ -1801,7 +1815,7 @@ def api_match_sync_all():
             if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
                 _enrich_hattricks_from_fallback(t1, t2, extra)
 
-            score = m["score"]["fullTime"]
+            score = _get_api_match_score(m)
             s1, s2 = score["home"], score["away"]
             stage = _map_stage(m.get("stage", "group"))
             
