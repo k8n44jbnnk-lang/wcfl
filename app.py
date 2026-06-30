@@ -2131,6 +2131,8 @@ def match_detail(match_id):
     data = load_data()
     match = next((m for m in data["matches"] if m["id"] == match_id), None)
     if not match: return "Match not found", 404
+    if match.get("score1") is None or match.get("score2") is None:
+        return redirect(url_for("fixtures"))
     return render_template("match_detail.html", match=match, data=data, active_page=None, no_points=bool(match.get("extra", {}).get("third_place") or match.get("round_label") == "3rd Place Play-off"))
 
 if __name__ == "__main__":

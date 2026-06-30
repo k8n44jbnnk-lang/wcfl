@@ -127,7 +127,7 @@ async function showTeamMatchDetails(teamName) {
   try {
     const resp = await fetch('/api/data');
     const data = await resp.json();
-    const teamMatches = data.matches.filter(m => m.team1 === teamName || m.team2 === teamName);
+    const teamMatches = data.matches.filter(m => (m.team1 === teamName || m.team2 === teamName) && m.score1 !== null && m.score1 !== undefined);
     
     if (teamMatches.length === 0) {
       body.innerHTML = `<h3>${teamName}</h3><p>No matches recorded yet.</p>`;

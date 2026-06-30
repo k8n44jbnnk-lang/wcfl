@@ -411,11 +411,13 @@
               <span class="owner-tag muted">{{ m.owner2 or 'unowned' }}</span>
             </div>
           </div>
+          {% if m.score1 is not none %}
           <div class="match-pts-row">
-            <span class="pts-tag">+{{ m.result.team1.rupees }} pts → {{ m.owner1 or '—' }}</span>
+            <span class="pts-tag">+{{ m.result.team1.points if m.result and m.result.team1 else 0 }} pts → {{ m.owner1 or '—' }}</span>
             <a href="/match/{{ m.id }}" class="detail-link">View analysis →</a>
-            <span class="pts-tag">+{{ m.result.team2.points }} pts → {{ m.owner2 or '—' }}</span>
+            <span class="pts-tag">+{{ m.result.team2.points if m.result and m.result.team2 else 0 }} pts → {{ m.owner2 or '—' }}</span>
           </div>
+          {% endif %}
         </div>
         {% endfor %}
       {% else %}
