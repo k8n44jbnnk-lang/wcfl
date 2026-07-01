@@ -1326,6 +1326,35 @@ def build_knockout_sections(data: dict) -> list[dict]:
     return sections
 
 
+def is_team_still_in(team_name, data):
+    # Check if they lost a knockout match in data["matches"]
+    for m in data.get("matches", []):
+        if m.get("stage") != "group":
+            if m.get("team1") == team_name or m.get("team2") == team_name:
+                s1, s2 = m.get("score1"), m.get("score2")
+                if s1 is not None and s2 is not None:
+                    if s1 == s2:
+                        winner = m.get("extra", {}).get("winner")
+                        if winner and winner != team_name:
+                            return False
+                    else:
+                        if m.get("team1") == team_name and s1 < s2:
+                            return False
+                        if m.get("team2") == team_name and s2 < s1:
+                            return False
+
+    # Check if they qualified for R32
+    r32_teams = set()
+    for t_pair in WC2026_R32_ACTUAL_TEAMS.values():
+        r32_teams.add(t_pair[0])
+        r32_teams.add(t_pair[1])
+    
+    if r32_teams:
+        if team_name not in r32_teams:
+            return False
+            
+    return True
+
 def build_team_point_rows(data: dict) -> list[dict]:
     rows = []
     matches = data.get("matches", [])
@@ -1350,8 +1379,10 @@ def build_team_point_rows(data: dict) -> list[dict]:
                 "group": group,
                 "group_label": f"Group {group}" if group else None,
                 "points": team_pts,
+                "is_still_in": is_team_still_in(team_name, data),
             })
         teams.sort(key=lambda r: (-r["points"], r["name"]))
+        active_teams = [t for t in teams if t["is_still_in"]]
         rows.append({
             "name": name,
             "pts": data.get("points", {}).get(name, 0),
@@ -1359,6 +1390,8 @@ def build_team_point_rows(data: dict) -> list[dict]:
             "teams": teams,
             "team_points": sum(t["points"] for t in teams),
             "matches_played": sum(1 for m in matches if m.get("owner1") == name or m.get("owner2") == name),
+            "active_teams_count": len(active_teams),
+            "eliminated_teams_count": len(teams) - len(active_teams),
         })
     rows.sort(key=lambda r: (-r["pts"], r["name"]))
     return rows

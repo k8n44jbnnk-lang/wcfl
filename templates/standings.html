@@ -49,7 +49,13 @@
       <div style="padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleDetails(this)">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
           <div class="avatar-sm" style="background: {{ p_color }}; width: 32px; height: 32px; font-size: 10px;">{{ row.name[0] }}</div>
-          <h3 style="margin: 0; font-size: 0.95rem;">{{ row.name }}'s Teams</h3>
+          <div style="display: flex; flex-direction: column;">
+            <h3 style="margin: 0; font-size: 0.95rem;">{{ row.name }}'s Teams</h3>
+            <span style="font-size: 0.7rem; color: var(--text-dim); font-weight: 600; margin-top: 2px;">
+              ⚽ Matches Played: <strong style="color: white;">{{ row.matches_played }}</strong> &nbsp;•&nbsp; 
+              🛡️ Active: <strong style="color: var(--success);">{{ row.active_teams_count }}</strong>/{{ row.owned | length }}
+            </span>
+          </div>
         </div>
         <div style="display: flex; align-items: center; gap: 0.75rem;">
           <span style="font-weight: 800; font-family: Lexend; color: var(--primary);">{{ row.pts }} PTS</span>
@@ -60,10 +66,15 @@
       <div class="details-content" style="display: none; padding: 1.25rem; background: rgba(255,255,255,0.02); border-top: 1px solid var(--border-light);">
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem;">
           {% for team in row.teams %}
-          <div class="match-card" style="text-align: center; cursor: pointer;" onclick="showTeamMatchDetails('{{ team.name }}')">
+          <div class="match-card" style="text-align: center; cursor: pointer; position: relative; {% if not team.is_still_in %}opacity: 0.6; filter: grayscale(0.5); border-color: rgba(255,255,255,0.03);{% endif %}" onclick="showTeamMatchDetails('{{ team.name }}')">
             <span style="font-size: 2rem;">{{ team.flag }}</span>
             <div style="font-weight: 700; font-size: 0.8rem; margin: 4px 0;">{{ team.name }}</div>
-            <div class="badge" style="background: var(--bg-dark); color: var(--success);">+{{ team.points }} pts</div>
+            <div class="badge" style="background: var(--bg-dark); color: var(--success); margin-bottom: 4px;">+{{ team.points }} pts</div>
+            {% if team.is_still_in %}
+              <div style="font-size: 0.6rem; font-weight: 800; color: var(--success); letter-spacing: 0.05em; text-transform: uppercase;">🛡️ Active</div>
+            {% else %}
+              <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-dim); letter-spacing: 0.05em; text-transform: uppercase;">💀 Eliminated</div>
+            {% endif %}
           </div>
           {% endfor %}
         </div>
