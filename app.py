@@ -716,12 +716,55 @@ def fetch_match_result(team1: str, team2: str) -> dict:
 
 def _is_name_match(n1, n2):
     if not n1 or not n2: return False
-    n1, n2 = n1.lower(), n2.lower()
-    if n1 == n2: return True
+    n1_norm = normalize_team_name(n1).lower()
+    n2_norm = normalize_team_name(n2).lower()
+    if n1_norm == n2_norm: return True
     # Common variations
-    synonyms = {"turkey": "türkiye", "türkiye": "turkey", "usa": "united states", "united states": "usa", "south korea": "republic of korea", "republic of korea": "south korea"}
-    if synonyms.get(n1) == n2: return True
+    synonyms = {"usa": "united states", "united states": "usa", "south korea": "republic of korea", "republic of korea": "south korea"}
+    if synonyms.get(n1_norm) == n2_norm: return True
     return False
+
+def _fetch_detailed_bookings_and_extra(api_id, t1, t2, headers, extra):
+    try:
+        match_url = f"{FOOTBALL_API_BASE}/matches/{api_id}"
+        m_resp = requests.get(match_url, headers=headers, timeout=10)
+        if m_resp.status_code == 200:
+            m_det = m_resp.json()
+            
+            # Red cards / bookings
+            rc_t1, rc_t2 = 0, 0
+            bookings = m_det.get("bookings", [])
+            for b in bookings:
+                if b.get("type") in ("RED_CARD", "YELLOW_RED_CARD"):
+                    card_team = b.get("team", {}).get("name")
+                    if card_team:
+                        if _is_name_match(card_team, t1):
+                            rc_t1 += 1
+                        elif _is_name_match(card_team, t2):
+                            rc_t2 += 1
+            if rc_t1 > 0: extra["red_card_t1"] = rc_t1
+            if rc_t2 > 0: extra["red_card_t2"] = rc_t2
+            
+            # Penalty shootout
+            score_det = m_det.get("score", {})
+            if score_det.get("duration") == "PENALTY_SHOOTOUT":
+                extra["penalties"] = True
+                extra["winner"] = t1 if score_det.get("winner") == "HOME_TEAM" else t2
+                
+            # Hattricks
+            counts = {}
+            goals = m_det.get("goals", [])
+            for g in goals:
+                scorer = g.get("scorer", {})
+                sid = scorer.get("id") or scorer.get("name")
+                if sid: counts[sid] = counts.get(sid, 0) + 1
+            for sid, goal_count in counts.items():
+                if goal_count >= 3:
+                    scorer_team = next((g["team"]["name"] for g in goals if (g.get("scorer", {}).get("id") or g.get("scorer", {}).get("name")) == sid), "")
+                    if _is_name_match(scorer_team, t1): extra["hattrick_t1"] = True
+                    else: extra["hattrick_t2"] = True
+    except Exception as e:
+        logging.error("Failed to fetch detailed match %s for bookings: %s", api_id, e)
 
 def _match_team_names(h1, a1, h2, a2):
     return (_is_name_match(h1, h2) and _is_name_match(a1, a2)) or (_is_name_match(h1, a2) and _is_name_match(a1, h2))
@@ -758,31 +801,7 @@ def api_match_sync_live():
                     t2 = next((t["name"] for t in TEAMS if _is_name_match(t["name"], t2_raw)), t2_raw)
                     
                     extra = {}
-                    if m["score"].get("duration") == "PENALTY_SHOOTOUT":
-                        extra["penalties"] = True
-                        extra["winner"] = t1 if m["score"]["winner"] == "HOME_TEAM" else t2
-
-                    # Extract red cards and hat-tricks
-                    rc_t1, rc_t2 = 0, 0
-                    for b in m.get("bookings", []):
-                        if b.get("type") in ("RED_CARD", "YELLOW_RED_CARD"):
-                            if _is_name_match(b["team"]["name"], t1): rc_t1 += 1
-                            else: rc_t2 += 1
-                    if rc_t1 > 0: extra["red_card_t1"] = rc_t1
-                    if rc_t2 > 0: extra["red_card_t2"] = rc_t2
-                    
-                    counts = {}
-                    for g in m.get("goals", []):
-                        scorer = g.get("scorer", {})
-                        sid = scorer.get("id") or scorer.get("name")
-                        if sid: counts[sid] = counts.get(sid, 0) + 1
-                    for sid, count in counts.items():
-                        if count >= 3:
-                            scorer_team = next((g["team"]["name"] for g in m.get("goals", []) if (g.get("scorer", {}).get("id") or g.get("scorer", {}).get("name")) == sid), "")
-                            if _is_name_match(scorer_team, t1): extra["hattrick_t1"] = True
-                            else: extra["hattrick_t2"] = True
-
-                    # Enrich hattricks from fallback API if not already set (e.g. on free tier)
+                    _fetch_detailed_bookings_and_extra(str(m["id"]), t1, t2, headers, extra)
                     if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
                         _enrich_hattricks_from_fallback(t1, t2, extra)
 
@@ -1833,7 +1852,7 @@ def score_analyser(t1, t2, s1, s2, stage, extra=None, pts_config=None):
         zero2 = {"name": t2, "points": 0, "breakdown": [{"event": "Third-place playoff (no pts)", "pts": 0}]}
         return {"team1": zero, "team2": zero2, "summary": f"{t1} {s1}-{s2} {t2} (3rd place)"}
 
-    wb = cfg["win"].get(stage, 6)
+    wb = int(cfg["win"].get(stage, 6))
     
     # Determine winner/loser correctly for knockouts (handling penalties)
     is_knockout = stage != "group"
@@ -1855,33 +1874,41 @@ def score_analyser(t1, t2, s1, s2, stage, extra=None, pts_config=None):
             bd.append({"event": f"Win ({stage.upper()})", "pts": wb})
             pts += wb
         elif drew and stage == "group":
-            bd.append({"event": "Draw", "pts": cfg.get("draw", 2)})
-            pts += cfg.get("draw", 2)
+            draw_val = int(cfg.get("draw", 2))
+            bd.append({"event": "Draw", "pts": draw_val})
+            pts += draw_val
         else:
-            bd.append({"event": "Loss", "pts": cfg.get("loss", 0)})
-            pts += cfg.get("loss", 0)
+            loss_val = int(cfg.get("loss", 0))
+            bd.append({"event": "Loss", "pts": loss_val})
+            pts += loss_val
 
         if gf > 0:
-            gp = gf * cfg.get("goal", 1)
+            gp = gf * int(cfg.get("goal", 1))
             bd.append({"event": f"Goals scored ({gf})", "pts": gp})
             pts += gp
             
         if ga == 0 and (is_winner or drew):
-            bd.append({"event": "Clean sheet", "pts": cfg.get("clean_sheet", 2)})
-            pts += cfg.get("clean_sheet", 2)
+            cs_val = int(cfg.get("clean_sheet", 2))
+            bd.append({"event": "Clean sheet", "pts": cs_val})
+            pts += cs_val
             
         if penalties:
-            bd.append({"event": "Won on penalties", "pts": cfg.get("penalties", 2)})
-            pts += cfg.get("penalties", 2)
+            pen_val = int(cfg.get("penalties", 2))
+            bd.append({"event": "Won on penalties", "pts": pen_val})
+            pts += pen_val
             
         if red_cards > 0:
-            p = cfg.get("red_card", -1) * red_cards
+            rc_val = int(cfg.get("red_card", -1))
+            if rc_val > 0:
+                rc_val = -rc_val
+            p = rc_val * red_cards
             bd.append({"event": f"Red cards ({red_cards})", "pts": p})
             pts += p
             
         if hattrick:
-            bd.append({"event": "Hat-trick", "pts": cfg.get("hattrick", 3)})
-            pts += cfg.get("hattrick", 3)
+            hat_val = int(cfg.get("hattrick", 3))
+            bd.append({"event": "Hat-trick", "pts": hat_val})
+            pts += hat_val
             
         return {"name": name, "points": pts, "breakdown": bd}
 
@@ -1967,29 +1994,7 @@ def api_match_sync_all():
             s2 = score.get("away")
             
             extra = {}
-            if m["score"].get("duration") == "PENALTY_SHOOTOUT":
-                extra["penalties"] = True
-                extra["winner"] = t1 if m["score"]["winner"] == "HOME_TEAM" else t2
-            
-            rc_t1, rc_t2 = 0, 0
-            for b in m.get("bookings", []):
-                if b.get("type") in ("RED_CARD", "YELLOW_RED_CARD"):
-                    if _is_name_match(b["team"]["name"], t1): rc_t1 += 1
-                    else: rc_t2 += 1
-            if rc_t1 > 0: extra["red_card_t1"] = rc_t1
-            if rc_t2 > 0: extra["red_card_t2"] = rc_t2
-            
-            counts = {}
-            for g in m.get("goals", []):
-                scorer = g.get("scorer", {})
-                sid = scorer.get("id") or scorer.get("name")
-                if sid: counts[sid] = counts.get(sid, 0) + 1
-            for sid, goal_count in counts.items():
-                if goal_count >= 3:
-                    scorer_team = next((g["team"]["name"] for g in m.get("goals", []) if (g.get("scorer", {}).get("id") or g.get("scorer", {}).get("name")) == sid), "")
-                    if _is_name_match(scorer_team, t1): extra["hattrick_t1"] = True
-                    else: extra["hattrick_t2"] = True
-            
+            _fetch_detailed_bookings_and_extra(api_id, t1, t2, headers, extra)
             if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
                 _enrich_hattricks_from_fallback(t1, t2, extra)
 
