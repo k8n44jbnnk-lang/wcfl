@@ -232,36 +232,7 @@
       </div>
     </div>
 
-    {# 3. Collapsible Squads #}
-    <div class="standard-card" style="grid-column: span 12;">
-      <div class="section-header">
-        <h2 class="section-title">🛡️ Player Squads</h2>
-        <div class="status-badge">Tap to Expand</div>
-      </div>
-      
-      {% for player_name, groups in player_teams_by_group.items() %}
-      {% set p_color = get_player_color(player_name) %}
-      <div class="squad-section" style="border-left: 4px solid {{ p_color }};">
-        <div class="squad-header" onclick="toggleSquad(this)">
-          <span class="toggle-icon">▼</span>
-          <div class="avatar-sm" style="background: {{ p_color }};">{{ player_name[0] }}</div>
-          <span class="player-name" style="flex:1; font-weight:700;">{{ player_name }}'s Teams</span>
-          <span class="badge success" style="font-size:0.7rem;">{{ data.points.get(player_name, 0) }} PTS</span>
-        </div>
-        <div class="squad-body">
-          {% for group_info in groups %}
-            {% for team in group_info.teams %}
-            <div class="team-chip">
-              <span>{{ team.flag }}</span>
-              <span>{{ team.name }}</span>
-              <span class="badge" style="font-size:0.5rem; background:rgba(255,255,255,0.1)">T{{ team.tier }}</span>
-            </div>
-            {% endfor %}
-          {% endfor %}
-        </div>
-      </div>
-      {% endfor %}
-    </div>
+
 
   </div>{# /.bento-grid #}
 
