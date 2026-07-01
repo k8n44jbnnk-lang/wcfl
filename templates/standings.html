@@ -7,81 +7,188 @@
   <p>Real-time leaderboard for the ₹14,000 prize pool.</p>
 </header>
 
+{# ── Tab Navigation ── #}
+<div style="display: flex; justify-content: center; gap: 1rem; margin: -1rem 0 2rem 0; width: 100%;">
+  <button class="db-pill active" id="tabLiveBtn" onclick="switchStandingsTab('live')" style="font-size: 0.8rem; padding: 0.5rem 1.25rem;">🏆 Live Leaderboard</button>
+  <button class="db-pill" id="tabPredictorBtn" onclick="switchStandingsTab('predictor')" style="font-size: 0.8rem; padding: 0.5rem 1.25rem;">🔮 Tournament Predictor</button>
+</div>
+
 <div class="page-container">
 
-  {# ── Leaderboard Sections ── #}
-  <section style="margin-bottom: 3rem;">
-    <div class="section-title">
-        <span>📊 Player Rankings</span>
-        <div class="badge">Click for Details</div>
-    </div>
-    
-  <div class="lb-container">
-    {% for row in rows %}
-    {% set rank = loop.index %}
-    {% set p_color = get_player_color(row.name) %}
-    <div class="data-card" style="{% if rank == 1 %}border-color: var(--accent-gold); box-shadow: 0 0 30px rgba(251,191,36,0.1);{% endif %}" onclick="toggleSquadByName('{{ row.name|replace(' ','_') }}')">
-      <div class="rank-badge" style="{% if rank == 1 %}background: var(--accent-gold); color: black;{% endif %}">{{ rank }}</div>
-      <div class="avatar-sm" style="background: {{ p_color }};">{{ row.name[0] }}</div>
-      <div class="data-card-info">
-          <div class="data-card-name">{{ row.name }}</div>
-          <div class="data-card-flags">
-              {% for t in row.teams %}<span title="{{ t.name }}">{{ t.flag }}</span>{% endfor %}
-          </div>
-      </div>
-      <div style="text-align: right;">
-          <div class="stat-val" style="{% if rank == 1 %}color: var(--accent-gold);{% else %}color: var(--primary);{% endif %}">{{ row.pts }}</div>
-          <div class="stat-lbl" style="font-size: 0.5rem;">Points</div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-
-  </section>
-
-  {# ── Expandable Squad Details ── #}
-  <section>
-    <div class="section-title">🛡️ Detailed Breakdowns</div>
-    
-    {% for row in team_rows %}
-    {% set p_color = get_player_color(row.name) %}
-    <div class="standard-card" style="padding: 0; overflow: hidden; border-left: 4px solid {{ p_color }};" id="squad-{{ row.name|replace(' ','_') }}">
-      <div style="padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleDetails(this)">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <div class="avatar-sm" style="background: {{ p_color }}; width: 32px; height: 32px; font-size: 10px;">{{ row.name[0] }}</div>
-          <div style="display: flex; flex-direction: column;">
-            <h3 style="margin: 0; font-size: 0.95rem;">{{ row.name }}'s Teams</h3>
-            <span style="font-size: 0.7rem; color: var(--text-dim); font-weight: 600; margin-top: 2px;">
-              ⚽ Matches Played: <strong style="color: white;">{{ row.matches_played }}</strong> &nbsp;•&nbsp; 
-              🛡️ Active: <strong style="color: var(--success);">{{ row.active_teams_count }}</strong>/{{ row.owned | length }}
-            </span>
-          </div>
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <span style="font-weight: 800; font-family: Lexend; color: var(--primary);">{{ row.pts }} PTS</span>
-          <span class="chevron">▼</span>
-        </div>
+  {# ── 1. Live Leaderboard Tab content ── #}
+  <div id="standingsLiveContent">
+    {# ── Player Rankings ── #}
+    <section style="margin-bottom: 3rem;">
+      <div class="section-title">
+          <span>📊 Player Rankings</span>
+          <div class="badge">Click for Details</div>
       </div>
       
-      <div class="details-content" style="display: none; padding: 1.25rem; background: rgba(255,255,255,0.02); border-top: 1px solid var(--border-light);">
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem;">
-          {% for team in row.teams %}
-          <div class="match-card" style="text-align: center; cursor: pointer; position: relative; {% if not team.is_still_in %}opacity: 0.6; filter: grayscale(0.5); border-color: rgba(255,255,255,0.03);{% endif %}" onclick="showTeamMatchDetails('{{ team.name }}')">
-            <span style="font-size: 2rem;">{{ team.flag }}</span>
-            <div style="font-weight: 700; font-size: 0.8rem; margin: 4px 0;">{{ team.name }}</div>
-            <div class="badge" style="background: var(--bg-dark); color: var(--success); margin-bottom: 4px;">+{{ team.points }} pts</div>
-            {% if team.is_still_in %}
-              <div style="font-size: 0.6rem; font-weight: 800; color: var(--success); letter-spacing: 0.05em; text-transform: uppercase;">🛡️ Active</div>
-            {% else %}
-              <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-dim); letter-spacing: 0.05em; text-transform: uppercase;">💀 Eliminated</div>
-            {% endif %}
+      <div class="lb-container">
+        {% for row in rows %}
+        {% set rank = loop.index %}
+        {% set p_color = get_player_color(row.name) %}
+        <div class="data-card" style="{% if rank == 1 %}border-color: var(--accent-gold); box-shadow: 0 0 30px rgba(251,191,36,0.1);{% endif %}" onclick="toggleSquadByName('{{ row.name|replace(' ','_') }}')">
+          <div class="rank-badge" style="{% if rank == 1 %}background: var(--accent-gold); color: black;{% endif %}">{{ rank }}</div>
+          <div class="avatar-sm" style="background: {{ p_color }};">{{ row.name[0] }}</div>
+          <div class="data-card-info">
+              <div class="data-card-name">{{ row.name }}</div>
+              <div class="data-card-flags">
+                  {% for t in row.teams %}<span title="{{ t.name }}">{{ t.flag }}</span>{% endfor %}
+              </div>
           </div>
-          {% endfor %}
+          <div style="text-align: right;">
+              <div class="stat-val" style="{% if rank == 1 %}color: var(--accent-gold);{% else %}color: var(--primary);{% endif %}">{{ row.pts }}</div>
+              <div class="stat-lbl" style="font-size: 0.5rem;">Points</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    {# ── Expandable Squad Details ── #}
+    <section>
+      <div class="section-title">🛡️ Detailed Breakdowns</div>
+      
+      {% for row in team_rows %}
+      {% set p_color = get_player_color(row.name) %}
+      <div class="standard-card" style="padding: 0; overflow: hidden; border-left: 4px solid {{ p_color }};" id="squad-{{ row.name|replace(' ','_') }}">
+        <div style="padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleDetails(this)">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="avatar-sm" style="background: {{ p_color }}; width: 32px; height: 32px; font-size: 10px;">{{ row.name[0] }}</div>
+            <div style="display: flex; flex-direction: column;">
+              <h3 style="margin: 0; font-size: 0.95rem;">{{ row.name }}'s Teams</h3>
+              <span style="font-size: 0.7rem; color: var(--text-dim); font-weight: 600; margin-top: 2px;">
+                ⚽ Matches Played: <strong style="color: white;">{{ row.matches_played }}</strong> &nbsp;•&nbsp; 
+                🛡️ Active: <strong style="color: var(--success);">{{ row.active_teams_count }}</strong>/{{ row.owned | length }}
+              </span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-weight: 800; font-family: Lexend; color: var(--primary);">{{ row.pts }} PTS</span>
+            <span class="chevron">▼</span>
+          </div>
+        </div>
+        
+        <div class="details-content" style="display: none; padding: 1.25rem; background: rgba(255,255,255,0.02); border-top: 1px solid var(--border-light);">
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem;">
+            {% for team in row.teams %}
+            <div class="match-card" style="text-align: center; cursor: pointer; position: relative; {% if not team.is_still_in %}opacity: 0.6; filter: grayscale(0.5); border-color: rgba(255,255,255,0.03);{% endif %}" onclick="showTeamMatchDetails('{{ team.name }}')">
+              <span style="font-size: 2rem;">{{ team.flag }}</span>
+              <div style="font-weight: 700; font-size: 0.8rem; margin: 4px 0;">{{ team.name }}</div>
+              <div class="badge" style="background: var(--bg-dark); color: var(--success); margin-bottom: 4px;">+{{ team.points }} pts</div>
+              {% if team.is_still_in %}
+                <div style="font-size: 0.6rem; font-weight: 800; color: var(--success); letter-spacing: 0.05em; text-transform: uppercase;">🛡️ Active</div>
+              {% else %}
+                <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-dim); letter-spacing: 0.05em; text-transform: uppercase;">💀 Eliminated</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
         </div>
       </div>
+      {% endfor %}
+    </section>
+  </div>
+
+  {# ── 2. Tournament Predictor Tab content ── #}
+  <div id="standingsPredictorContent" style="display: none;">
+    
+    {# ── Champion Prediction Hero Card ── #}
+    {% if pred_rows %}
+    {% set predicted_winner = pred_rows[0] %}
+    {% set pw_color = get_player_color(predicted_winner.name) %}
+    <div class="card" style="border: 2px solid var(--accent-gold); background: radial-gradient(circle at top right, rgba(251,191,36,0.1), transparent); margin-bottom: 2.5rem; text-align: center; padding: 2rem 1.5rem;">
+      <div style="font-size: 3rem; margin-bottom: 8px;">👑</div>
+      <span class="badge" style="background: var(--accent-gold); color: #05080f; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;">Projected Champion</span>
+      <h2 style="font-size: 2rem; font-family: Lexend; font-weight: 900; margin: 10px 0; color: white;">{{ predicted_winner.name | upper }}</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">
+        Projected to finish with <strong style="color: var(--accent-gold); font-size: 1.15rem;">{{ predicted_winner.projected_final }} PTS</strong> 
+        (Current: {{ predicted_winner.current_points }} • Projected +{{ predicted_winner.projected_earned }} pts)
+      </p>
     </div>
-    {% endfor %}
-  </section>
+    {% endif %}
+
+    {# ── Projected Standings Table ── #}
+    <section style="margin-bottom: 3rem;">
+      <div class="section-title">
+        <span>🔮 Projected Final Leaderboard</span>
+        <div class="badge">Simulated</div>
+      </div>
+      
+      <div class="card" style="padding: 0; overflow-x: auto; background: var(--bg-surface);">
+        <table class="db-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr>
+              <th style="width: 60px; text-align: center; padding: 0.75rem 0.5rem;">Proj Pos</th>
+              <th style="padding: 0.75rem 0.5rem;">Player</th>
+              <th style="text-align: center; padding: 0.75rem 0.5rem;">Current Pts</th>
+              <th style="text-align: center; color: var(--success); padding: 0.75rem 0.5rem;">Proj Earned</th>
+              <th style="text-align: center; color: var(--accent-gold); font-weight: 800; padding: 0.75rem 0.5rem;">Proj Final Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p_row in pred_rows %}
+            {% set p_color = get_player_color(p_row.name) %}
+            <tr style="{% if loop.index == 1 %}background: rgba(251,191,36,0.02);{% endif %}">
+              <td style="text-align: center; font-weight: 800; font-family: Lexend; color: white; font-size: 1.05rem; padding: 0.75rem 0.5rem;">
+                {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+              </td>
+              <td style="font-weight: 700; display: flex; align-items: center; gap: 8px; padding: 0.75rem 0.5rem;">
+                <span class="avatar-sm" style="background: {{ p_color }}; width: 24px; height: 24px; font-size: 0.65rem; margin: 0; line-height: 24px; display: inline-block; text-align: center; border-radius: 50%; color: white;">{{ p_row.name[0] }}</span>
+                <span style="color: {{ p_color }};">{{ p_row.name }}</span>
+              </td>
+              <td style="text-align: center; font-weight: 600; color: var(--text-muted); padding: 0.75rem 0.5rem;">{{ p_row.current_points }}</td>
+              <td style="text-align: center; font-weight: 700; color: var(--success); padding: 0.75rem 0.5rem;">+{{ p_row.projected_earned }}</td>
+              <td style="text-align: center; font-weight: 900; color: white; font-size: 1.1rem; font-family: Lexend; padding: 0.75rem 0.5rem;">{{ p_row.projected_final }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    {# ── Future Match Predictions Breakdown ── #}
+    <section>
+      <div class="section-title">
+        <span>📅 Future Fixtures Simulations</span>
+        <div class="badge">{{ future_preds | length }} Remaining</div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+        {% for pred in future_preds %}
+        <div class="card" style="background: var(--bg-surface); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; border-left: 3px solid var(--border-light); margin-bottom: 0;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px;">
+            <span>{{ pred.stage }}</span>
+            <span>Match #{{ pred.match_num }}</span>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px; margin: 8px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; {% if pred.predicted_winner == pred.team1 %}font-weight: 800; color: white;{% else %}color: var(--text-muted); opacity: 0.7;{% endif %}">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span>{% for t in teams %}{% if t.name == pred.team1 %}{{ t.flag }}{% endif %}{% endfor %}</span>
+                <span>{{ pred.team1 }}</span>
+              </span>
+              <span style="font-size: 0.75rem;">👤 {{ pred.owner1 or 'Unowned' }} (+{{ pred.pts1 }} pts)</span>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; {% if pred.predicted_winner == pred.team2 %}font-weight: 800; color: white;{% else %}color: var(--text-muted); opacity: 0.7;{% endif %}">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span>{% for t in teams %}{% if t.name == pred.team2 %}{{ t.flag }}{% endif %}{% endfor %}</span>
+                <span>{{ pred.team2 }}</span>
+              </span>
+              <span style="font-size: 0.75rem;">👤 {{ pred.owner2 or 'Unowned' }} (+{{ pred.pts2 }} pts)</span>
+            </div>
+          </div>
+          
+          <div style="border-top: 1px solid rgba(255,255,255,0.03); padding-top: 8px; margin-top: 8px; font-size: 0.75rem; color: var(--text-dim); font-weight: 600;">
+            🔮 Projected Winner: <span style="color: var(--accent-gold); font-weight: 800;">{{ pred.predicted_winner }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
 
 </div>{# /.page-container #}
 
@@ -99,6 +206,25 @@
 
 {% block extra_js %}
 <script>
+function switchStandingsTab(tab) {
+  const liveContent = document.getElementById("standingsLiveContent");
+  const predictorContent = document.getElementById("standingsPredictorContent");
+  const liveBtn = document.getElementById("tabLiveBtn");
+  const predictorBtn = document.getElementById("tabPredictorBtn");
+  
+  if (tab === 'live') {
+    liveContent.style.display = 'block';
+    predictorContent.style.display = 'none';
+    liveBtn.classList.add('active');
+    predictorBtn.classList.remove('active');
+  } else {
+    liveContent.style.display = 'none';
+    predictorContent.style.display = 'block';
+    liveBtn.classList.remove('active');
+    predictorBtn.classList.add('active');
+  }
+}
+
 function toggleDetails(header) {
   const content = header.nextElementSibling;
   const chevron = header.querySelector('.chevron');

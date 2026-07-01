@@ -2103,6 +2103,87 @@ def fixtures():
     }
     return render_template("fixtures.html", data=data, by_round=ordered_rounds, groups=groups, all_owned=all_owned, next_matches=next_matches, team_rows=team_rows, knockout_sections=knockout_sections, fx_error=fx["error"], st_error=st["error"], teams=TEAMS, active_page="fixtures", get_player_color=get_player_color)
 
+def get_predicted_standings(data):
+    # Start with current actual points
+    simulated_points = {p["name"]: data.get("points", {}).get(p["name"], 0) for p in data.get("players", [])}
+    
+    sorted_groups = calculate_local_group_standings(data)
+    
+    thirds = []
+    for l in "ABCDEFGHIJKL":
+        if l in sorted_groups and len(sorted_groups[l]) >= 3:
+            thirds.append(sorted_groups[l][2])
+            
+    sorted_thirds = sorted(thirds, key=lambda x: (-x["pts"], -x["gd"], -x["gf"], x["team"]))
+    q_3rds = [(t["team"], get_team_group(t["team"])) for t in sorted_thirds[:8]]
+    
+    slots_3rd = [
+        (74, "E"), (77, "I"), (79, "A"), (80, "L"),
+        (81, "D"), (82, "G"), (85, "B"), (87, "K")
+    ]
+    assigned_3rds = assign_3rds(slots_3rd, q_3rds)
+    if not assigned_3rds:
+        assigned_3rds = {match_num: q_3rds[i][0] for i, (match_num, _) in enumerate(slots_3rd) if i < len(q_3rds)}
+        
+    resolved_cache = {}
+    
+    predictions = []
+    
+    # We resolve all knockout matches from 73 to 104
+    for match_num in range(73, 105):
+        outcome = resolve_match_outcome(match_num, data, sorted_groups, assigned_3rds, resolved_cache)
+        if not outcome.get("played"):
+            team1, team2 = outcome["team1"], outcome["team2"]
+            winner = outcome["winner"]
+            if team1 != "TBD" and team2 != "TBD" and winner != "TBD":
+                if match_num <= 88: stage = "r32"
+                elif match_num <= 96: stage = "r16"
+                elif match_num <= 100: stage = "qf"
+                elif match_num <= 102: stage = "sf"
+                elif match_num == 103: stage = "3rd"
+                else: stage = "final"
+                
+                if stage == "3rd":
+                    continue
+                    
+                s1 = 2 if winner == team1 else 1
+                s2 = 1 if winner == team1 else 2
+                
+                result = score_analyser(team1, team2, s1, s2, stage, extra={}, pts_config=data.get("points_config"))
+                o1 = data.get("team_sold", {}).get(get_official_team_name(team1))
+                o2 = data.get("team_sold", {}).get(get_official_team_name(team2))
+                
+                predictions.append({
+                    "match_num": match_num,
+                    "stage": stage.upper(),
+                    "team1": team1,
+                    "team2": team2,
+                    "predicted_winner": winner,
+                    "owner1": o1 or "Unowned",
+                    "owner2": o2 or "Unowned",
+                    "pts1": result["team1"]["points"],
+                    "pts2": result["team2"]["points"],
+                })
+                
+                if o1:
+                    simulated_points[o1] += result["team1"]["points"]
+                if o2:
+                    simulated_points[o2] += result["team2"]["points"]
+                    
+    # Format rows
+    pred_rows = []
+    for name, final_pts in simulated_points.items():
+        curr_pts = data.get("points", {}).get(name, 0)
+        proj_earned = final_pts - curr_pts
+        pred_rows.append({
+            "name": name,
+            "current_points": curr_pts,
+            "projected_earned": proj_earned,
+            "projected_final": final_pts,
+        })
+    pred_rows.sort(key=lambda x: (-x["projected_final"], x["name"]))
+    return pred_rows, predictions
+
 @app.route("/standings")
 def standings():
     data = load_data()
@@ -2111,8 +2192,29 @@ def standings():
     for p in team_rows:
         name = p["name"]
         recent = [m for m in data["matches"] if m.get("owner1") == name or m.get("owner2") == name][:5]
-        rows.append({"name": name, "pts": p["pts"], "owned": p["owned"], "matches_played": p["matches_played"], "recent": recent, "teams": p["teams"], "team_points": p["team_points"]})
-    return render_template("standings.html", data=data, rows=rows, team_rows=team_rows, teams=TEAMS, active_page="standings", get_player_color=get_player_color)
+        rows.append({
+            "name": name, 
+            "pts": p["pts"], 
+            "owned": p["owned"], 
+            "matches_played": p["matches_played"], 
+            "recent": recent, 
+            "teams": p["teams"], 
+            "team_points": p["team_points"],
+            "active_teams_count": p["active_teams_count"],
+            "eliminated_teams_count": p["eliminated_teams_count"]
+        })
+    pred_rows, future_preds = get_predicted_standings(data)
+    return render_template(
+        "standings.html", 
+        data=data, 
+        rows=rows, 
+        team_rows=team_rows, 
+        teams=TEAMS, 
+        active_page="standings", 
+        get_player_color=get_player_color,
+        pred_rows=pred_rows,
+        future_preds=future_preds
+    )
 
 @app.route("/team-leaderboard")
 def team_leaderboard():
