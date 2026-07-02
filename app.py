@@ -724,6 +724,77 @@ def _is_name_match(n1, n2):
     if synonyms.get(n1_norm) == n2_norm: return True
     return False
 
+_espn_scoreboard_cache = {"ts": 0, "events": []}
+ESPN_CACHE_TTL = 300
+
+def _fetch_detailed_bookings_and_extra_espn(t1, t2, extra):
+    now = time.time()
+    events = []
+    
+    if now - _espn_scoreboard_cache["ts"] < ESPN_CACHE_TTL and _espn_scoreboard_cache["events"]:
+        events = _espn_scoreboard_cache["events"]
+    else:
+        try:
+            url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260719&limit=200"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                events = resp.json().get("events", [])
+                _espn_scoreboard_cache["ts"] = now
+                _espn_scoreboard_cache["events"] = events
+        except Exception as e:
+            logging.error("Failed to fetch ESPN scoreboard: %s", e)
+            
+    matched_event = None
+    for e in events:
+        try:
+            comp = e['competitions'][0]
+            home = comp['competitors'][0]['team']['displayName']
+            away = comp['competitors'][1]['team']['displayName']
+            if (_is_name_match(home, t1) and _is_name_match(away, t2)) or (_is_name_match(home, t2) and _is_name_match(away, t1)):
+                matched_event = e
+                break
+        except Exception:
+            continue
+            
+    if not matched_event:
+        return
+        
+    game_id = matched_event['id']
+    try:
+        summary_url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event={game_id}"
+        s_resp = requests.get(summary_url, timeout=10)
+        if s_resp.status_code == 200:
+            data = s_resp.json()
+            key_events = data.get("keyEvents", [])
+            rc_t1, rc_t2 = 0, 0
+            
+            for event in key_events:
+                evt_type = event.get("type", {})
+                evt_type_code = str(evt_type.get("type")).lower()
+                evt_text = str(event.get("text")).lower()
+                
+                is_red_card = (evt_type_code in ("red-card", "yellow-red-card") or 
+                               "red card" in evt_type.get("text", "").lower() or 
+                               "red card" in evt_text)
+                               
+                if is_red_card:
+                    card_team = event.get("team", {}).get("displayName")
+                    if card_team:
+                        if _is_name_match(card_team, t1):
+                            rc_t1 += 1
+                        elif _is_name_match(card_team, t2):
+                            rc_t2 += 1
+                            
+            if rc_t1 > 0: extra["red_card_t1"] = rc_t1
+            if rc_t2 > 0: extra["red_card_t2"] = rc_t2
+            
+            score_det = matched_event.get("competitions", [{}])[0].get("status", {}).get("type", {})
+            if "shootout" in str(score_det.get("detail", "")).lower() or score_det.get("name") == "STATUS_SHOOTOUT":
+                extra["penalties"] = True
+                
+    except Exception as e:
+        logging.error("Failed to fetch ESPN match summary %s: %s", game_id, e)
+
 def _fetch_detailed_bookings_and_extra(api_id, t1, t2, headers, extra):
     try:
         match_url = f"{FOOTBALL_API_BASE}/matches/{api_id}"
@@ -765,6 +836,9 @@ def _fetch_detailed_bookings_and_extra(api_id, t1, t2, headers, extra):
                     else: extra["hattrick_t2"] = True
     except Exception as e:
         logging.error("Failed to fetch detailed match %s for bookings: %s", api_id, e)
+
+    # ALWAYS enrich/verify from ESPN to ensure red cards sync works even on free tier!
+    _fetch_detailed_bookings_and_extra_espn(t1, t2, extra)
 
 def _match_team_names(h1, a1, h2, a2):
     return (_is_name_match(h1, h2) and _is_name_match(a1, a2)) or (_is_name_match(h1, a2) and _is_name_match(a1, h2))
