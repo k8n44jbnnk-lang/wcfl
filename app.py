@@ -853,58 +853,106 @@ def _map_stage_simple(s):
     if "final" in s: return "final"
     return "group"
 
+def _recalculate_all_players_points(data):
+    player_points = {p["name"]: 0 for p in data.get("players", [])}
+    for m in data.get("matches", []):
+        o1, o2 = m.get("owner1"), m.get("owner2")
+        res = m.get("result", {})
+        if o1 and "team1" in res:
+            player_points[o1] += res["team1"]["points"]
+        if o2 and "team2" in res:
+            player_points[o2] += res["team2"]["points"]
+    data["points"] = player_points
+
+def _sync_or_update_match(data, m, headers):
+    api_id = str(m["id"])
+    t1_raw, t2_raw = m["homeTeam"]["name"], m["awayTeam"]["name"]
+    t1 = next((t["name"] for t in TEAMS if _is_name_match(t["name"], t1_raw)), t1_raw)
+    t2 = next((t["name"] for t in TEAMS if _is_name_match(t["name"], t2_raw)), t2_raw)
+    stage = _map_stage(m.get("stage", "group"))
+    
+    score = _get_api_match_score(m)
+    s1, s2 = score["home"], score["away"]
+    
+    existing_match = next((x for x in data.get("matches", []) if str(x.get("fixture_id")) == api_id), None)
+    
+    extra = {}
+    _fetch_detailed_bookings_and_extra(api_id, t1, t2, headers, extra)
+    if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
+        _enrich_hattricks_from_fallback(t1, t2, extra)
+        
+    result = score_analyser(t1, t2, s1, s2, stage, extra, pts_config=data.get("points_config"))
+    o1 = data["team_sold"].get(get_official_team_name(t1))
+    o2 = data["team_sold"].get(get_official_team_name(t2))
+    
+    if existing_match:
+        old_s1 = existing_match.get("score1")
+        old_s2 = existing_match.get("score2")
+        old_extra = existing_match.get("extra", {})
+        
+        diff = (old_s1 != s1 or old_s2 != s2 or 
+                old_extra.get("penalties") != extra.get("penalties") or 
+                old_extra.get("winner") != extra.get("winner") or
+                old_extra.get("red_card_t1") != extra.get("red_card_t1") or
+                old_extra.get("red_card_t2") != extra.get("red_card_t2") or
+                old_extra.get("hattrick_t1") != extra.get("hattrick_t1") or
+                old_extra.get("hattrick_t2") != extra.get("hattrick_t2"))
+                
+        if diff:
+            existing_match["score1"] = s1
+            existing_match["score2"] = s2
+            existing_match["extra"] = extra
+            existing_match["result"] = result
+            existing_match["owner1"] = o1
+            existing_match["owner2"] = o2
+            existing_match["result"]["summary"] = f"{t1} {s1}–{s2} {t2} ({stage})"
+            return "updated"
+        return None
+    else:
+        utc = m.get("utcDate", "")
+        try:
+            dt = datetime.strptime(utc, "%Y-%m-%dT%H:%M:%SZ")
+            ts = dt.strftime("%d %b %Y, %H:%M")
+        except:
+            ts = datetime.now().strftime("%d %b %Y, %H:%M")
+            
+        match_record = {
+            "id": str(uuid.uuid4())[:8], "team1": t1, "team2": t2, "score1": s1, "score2": s2,
+            "stage": stage, "extra": extra, "owner1": o1, "owner2": o2, "result": result,
+            "timestamp": ts, "flag1": get_team_flag(t1), "flag2": get_team_flag(t2),
+            "fixture_id": api_id,
+        }
+        data["matches"].insert(0, match_record)
+        return "added"
+
 @app.route("/api/match/sync-live", methods=["POST"])
 def api_match_sync_live():
     """Sync all live or finished matches from external APIs and update data."""
     data = load_data()
-    # Logic to fetch and merge live results...
-    # For now, we'll implement a robust sync that updates based on ANY finished matches found.
-    # This endpoint can be polled by the frontend.
     headers = {"X-Auth-Token": FOOTBALL_API_KEY} if FOOTBALL_API_KEY else {}
-    count = 0
+    count_added = 0
+    count_updated = 0
     try:
-        # Check Football-Data.org
         resp = requests.get(f"{FOOTBALL_API_BASE}/competitions/{WC2026_COMPETITION}/matches", headers=headers, timeout=10)
         if resp.status_code == 200:
             matches = resp.json().get("matches", [])
-            recorded_ids = {str(m.get("fixture_id")) for m in data.get("matches", []) if m.get("fixture_id")}
             for m in matches:
-                if m.get("status") == "FINISHED" and str(m["id"]) not in recorded_ids:
-                    t1_raw, t2_raw = m["homeTeam"]["name"], m["awayTeam"]["name"]
-                    t1 = next((t["name"] for t in TEAMS if _is_name_match(t["name"], t1_raw)), t1_raw)
-                    t2 = next((t["name"] for t in TEAMS if _is_name_match(t["name"], t2_raw)), t2_raw)
-                    
-                    extra = {}
-                    _fetch_detailed_bookings_and_extra(str(m["id"]), t1, t2, headers, extra)
-                    if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
-                        _enrich_hattricks_from_fallback(t1, t2, extra)
-
-                    score = _get_api_match_score(m)
-                    res = _auto_record_match(data, t1, t2, score["home"], score["away"], _map_stage(m.get("stage", "")), str(m["id"]), extra)
-                    if res: count += 1
+                if m.get("status") == "FINISHED":
+                    res = _sync_or_update_match(data, m, headers)
+                    if res == "added": count_added += 1
+                    elif res == "updated": count_updated += 1
         
-        if count > 0: save_data(data)
-        return jsonify({"ok": True, "count": count, "message": f"Synced {count} matches."})
+        if count_added > 0 or count_updated > 0:
+            _recalculate_all_players_points(data)
+            save_data(data)
+            
+        return jsonify({
+            "ok": True, 
+            "count": count_added + count_updated, 
+            "message": f"Synced matches (Added: {count_added}, Updated: {count_updated})."
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-def _auto_record_match(data, t1, t2, s1, s2, stage, fixture_id, extra=None):
-    if any(m.get("fixture_id") == fixture_id for m in data.get("matches", [])): return False
-    extra = extra or {}
-    result = score_analyser(t1, t2, s1, s2, stage, extra, pts_config=data.get("points_config"))
-    o1 = data["team_sold"].get(get_official_team_name(t1))
-    o2 = data["team_sold"].get(get_official_team_name(t2))
-    if o1: data["points"][o1] = data["points"].get(o1, 0) + result["team1"]["points"]
-    if o2: data["points"][o2] = data["points"].get(o2, 0) + result["team2"]["points"]
-    match_record = {
-        "id": str(uuid.uuid4())[:8], "team1": t1, "team2": t2, "score1": s1, "score2": s2,
-        "stage": stage, "extra": extra, "owner1": o1, "owner2": o2, "result": result,
-        "timestamp": datetime.now().strftime("%d %b %Y, %H:%M"),
-        "flag1": get_team_flag(t1), "flag2": get_team_flag(t2),
-        "fixture_id": fixture_id,
-    }
-    data["matches"].insert(0, match_record)
-    return True
 
 
 def fetch_all_fixtures() -> dict:
@@ -2080,57 +2128,20 @@ def api_match_sync_all():
         count_added = 0
         count_updated = 0
         
-        # Track existing match IDs
-        recorded_ids = {str(m.get("fixture_id")) for m in data.get("matches", []) if m.get("fixture_id")}
-        
         for m in matches:
-            api_id = str(m["id"])
-            if api_id in recorded_ids:
-                continue
-                
-            status = m.get("status", "")
-            stage = _map_stage(m.get("stage", "group"))
+            res = _sync_or_update_match(data, m, headers)
+            if res == "added": count_added += 1
+            elif res == "updated": count_updated += 1
             
-            t1_raw = m["homeTeam"]["name"]
-            t2_raw = m["awayTeam"]["name"]
-            t1 = next((t["name"] for t in TEAMS if _is_name_match(t["name"], t1_raw)), t1_raw)
-            t2 = next((t["name"] for t in TEAMS if _is_name_match(t["name"], t2_raw)), t2_raw)
-            
-            score = _get_api_match_score(m)
-            s1 = score.get("home")
-            s2 = score.get("away")
-            
-            extra = {}
-            _fetch_detailed_bookings_and_extra(api_id, t1, t2, headers, extra)
-            if not extra.get("hattrick_t1") and not extra.get("hattrick_t2"):
-                _enrich_hattricks_from_fallback(t1, t2, extra)
-
-            result = score_analyser(t1, t2, s1, s2, stage, extra, pts_config=data.get("points_config"))
-            o1 = data["team_sold"].get(get_official_team_name(t1))
-            o2 = data["team_sold"].get(get_official_team_name(t2))
-            if o1: data["points"][o1] = data["points"].get(o1, 0) + result["team1"]["points"]
-            if o2: data["points"][o2] = data["points"].get(o2, 0) + result["team2"]["points"]
-
-            utc = m.get("utcDate", "")
-            try:
-                dt = datetime.strptime(utc, "%Y-%m-%dT%H:%M:%SZ")
-                ts = dt.strftime("%d %b %Y, %H:%M")
-            except:
-                ts = datetime.now().strftime("%d %b %Y, %H:%M")
-
-            match_record = {
-                "id": str(uuid.uuid4())[:8], "team1": t1, "team2": t2, "score1": s1, "score2": s2,
-                "stage": stage, "extra": extra, "owner1": o1, "owner2": o2, "result": result,
-                "timestamp": ts, "flag1": get_team_flag(t1), "flag2": get_team_flag(t2),
-                "fixture_id": api_id,
-            }
-            data["matches"].insert(0, match_record)
-            count_added += 1
-            
-        if count_added > 0:
+        if count_added > 0 or count_updated > 0:
+            _recalculate_all_players_points(data)
             save_data(data)
             
-        return jsonify({"ok": True, "count": count_added, "message": f"Successfully synced {count_added} new matches."})
+        return jsonify({
+            "ok": True,
+            "count": count_added + count_updated,
+            "message": f"Successfully synced matches (Added: {count_added}, Updated: {count_updated})."
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
