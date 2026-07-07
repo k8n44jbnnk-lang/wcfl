@@ -789,8 +789,27 @@ def _fetch_detailed_bookings_and_extra_espn(t1, t2, extra):
             if rc_t2 > 0: extra["red_card_t2"] = rc_t2
             
             score_det = matched_event.get("competitions", [{}])[0].get("status", {}).get("type", {})
-            if "shootout" in str(score_det.get("detail", "")).lower() or score_det.get("name") == "STATUS_SHOOTOUT":
+            status_name = str(score_det.get("name")).upper()
+            status_detail = str(score_det.get("detail")).lower()
+            
+            is_shootout = ("shootout" in status_detail or 
+                           "pen" in status_detail or 
+                           status_name in ("STATUS_SHOOTOUT", "STATUS_FINAL_PEN"))
+                           
+            if is_shootout:
                 extra["penalties"] = True
+                
+                # Find winner from competitors
+                comp = matched_event.get("competitions", [{}])[0]
+                winner_team = None
+                for competitor in comp.get("competitors", []):
+                    if competitor.get("winner") is True:
+                        winner_team = competitor.get("team", {}).get("displayName")
+                        break
+                        
+                if winner_team:
+                    mapped_winner = next((t["name"] for t in TEAMS if _is_name_match(t["name"], winner_team)), winner_team)
+                    extra["winner"] = mapped_winner
                 
     except Exception as e:
         logging.error("Failed to fetch ESPN match summary %s: %s", game_id, e)
@@ -1532,14 +1551,45 @@ def validate_match_input(body: dict):
         return "score1 and score2 must be integers"
     if not (0 <= s1 <= 20 and 0 <= s2 <= 20):
         return "scores must be in range 0-20"
-    if body.get("stage", "group") not in VALID_STAGES:
+    
+    stage = body.get("stage", "group")
+    if stage not in VALID_STAGES:
         return f"stage must be one of {sorted(VALID_STAGES)}"
+        
+    extra = body.get("extra", {}) or {}
+    
+    # Enforce knockout draw penalties winner
+    if stage != "group" and s1 == s2:
+        winner = extra.get("winner")
+        if not winner:
+            return "Knockout matches that end in a draw must specify a penalties winner in extra.winner"
+        if winner not in (t1, t2):
+            return "shootout winner must be one of the playing teams"
+        if not extra.get("penalties"):
+            return "Knockout matches that end in a draw must have extra.penalties set to true"
+            
     fixture_id = body.get("fixture_id")
+    
+    # Prevent duplicate matches
+    if not app.config.get('TESTING'):
+        data = load_data()
+        if fixture_id:
+            if any(str(m.get("fixture_id")) == str(fixture_id) for m in data.get("matches", [])):
+                return f"A match with fixture ID '{fixture_id}' is already recorded in the database"
+                
+        # Prevent duplicate match by teams & stage
+        for m in data.get("matches", []):
+            if m.get("stage") == stage:
+                t1_match = _is_name_match(m.get("team1"), t1) and _is_name_match(m.get("team2"), t2)
+                t2_match = _is_name_match(m.get("team1"), t2) and _is_name_match(m.get("team2"), t1)
+                if t1_match or t2_match:
+                    return f"A match between '{t1}' and '{t2}' at stage '{stage}' is already recorded in the database"
+
     if fixture_id:
         fixture = find_public_group_fixture(fixture_id)
         if not fixture:
             return "fixture_id is not recognised"
-        if body.get("stage", "group") != "group":
+        if stage != "group":
             return "public fixture matches must be recorded as group stage"
         if fixture.get("home") != t1 or fixture.get("away") != t2:
             return "selected fixture teams do not match the public schedule"
@@ -1967,8 +2017,6 @@ def api_match_add():
     result = score_analyser(t1, t2, s1, s2, stage, extra, pts_config=data.get("points_config"))
     o1 = data["team_sold"].get(get_official_team_name(t1))
     o2 = data["team_sold"].get(get_official_team_name(t2))
-    if o1: data["points"][o1] = data["points"].get(o1, 0) + result["team1"]["points"]
-    if o2: data["points"][o2] = data["points"].get(o2, 0) + result["team2"]["points"]
     match_record = {
         "id": str(uuid.uuid4())[:8], "team1": t1, "team2": t2, "score1": s1, "score2": s2,
         "stage": stage, "extra": extra, "owner1": o1, "owner2": o2, "result": result,
@@ -1978,6 +2026,7 @@ def api_match_add():
         "fixture_date": fixture.get("display_dt") if fixture else None,
     }
     data["matches"].insert(0, match_record)
+    _recalculate_all_players_points(data)
     save_data(data)
     return jsonify({"ok": True, "match": match_record, "data": data})
 
@@ -1993,10 +2042,8 @@ def api_match_delete(match_id):
     data = load_data()
     match = next((m for m in data["matches"] if m["id"] == match_id), None)
     if not match: return jsonify({"error": "Match not found"}), 404
-    o1, o2 = match.get("owner1"), match.get("owner2")
-    if o1: data["points"][o1] = max(0, data["points"].get(o1, 0) - match["result"]["team1"]["points"])
-    if o2: data["points"][o2] = max(0, data["points"].get(o2, 0) - match["result"]["team2"]["points"])
     data["matches"] = [m for m in data["matches"] if m["id"] != match_id]
+    _recalculate_all_players_points(data)
     save_data(data)
     return jsonify({"ok": True})
 
@@ -2082,11 +2129,29 @@ def score_analyser(t1, t2, s1, s2, stage, extra=None, pts_config=None):
     
     return {"team1": r1, "team2": r2, "summary": f"{t1} {s1}–{s2} {t2} ({stage})"}
 
+def validate_points_config(cfg: dict):
+    valid_keys = {
+        "win_group", "win_r32", "win_r16", "win_qf", "win_sf", "win_final",
+        "goal", "clean_sheet", "penalties", "red_card", "hattrick"
+    }
+    for k, v in cfg.items():
+        if k not in valid_keys:
+            return f"Invalid key '{k}' in points configuration"
+        try:
+            int(v)
+        except (ValueError, TypeError):
+            return f"Value for '{k}' must be an integer"
+    return None
+
 @app.route("/api/points", methods=["POST"])
 def api_points():
     data = load_data()
     pts = (request.json or {}).get("points", {})
-    data["points_config"] = pts
+    err = validate_points_config(pts)
+    if err:
+        return jsonify({"error": err}), 400
+    data["points_config"] = {k: int(v) for k, v in pts.items()}
+    _recalculate_all_players_points(data)
     save_data(data)
     return jsonify({"ok": True})
 
